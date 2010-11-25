@@ -54,15 +54,29 @@
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-junit</artifactId>
+            <artifactId>pax-exam-junit4</artifactId>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-container-paxrunner</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-container-default</artifactId>
+            <artifactId>pax-exam-container-native</artifactId>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-extender</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-junit-extender-impl</artifactId>
+            <artifactId>pax-exam-extender-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-link-mvn</artifactId>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.swissbox</groupId>
@@ -75,14 +89,6 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>${project.basedir}/src/main/resources</directory>
-                <includes>
-                    <include>**/*</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -91,12 +97,12 @@
                     <execution>
                         <id>copy-filtered</id>
                         <!-- here the phase you need -->
-                        <phase>compile</phase>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${basedir}/target/classes/</outputDirectory>
+                            <outputDirectory>${basedir}/target/config/org/apache/karaf/testing/</outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>../../assembly/src/main/filtered-resources/etc</directory>
@@ -107,6 +113,27 @@
                                         <include>jre.properties</include>
                                         <include>custom.properties</include>
                                     </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>add-resource</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/target/config</directory>
                                 </resource>
                             </resources>
                         </configuration>
@@ -133,20 +160,23 @@
                 <configuration>
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-                        <Export-Package>org.apache.karaf.testing;version=${project.version}</Export-Package>
+                        <Export-Package>
+                            org.apache.karaf.testing;version=${project.version};-noimport:=true
+                        </Export-Package>
                         <Import-Package>
-                            !org.apache.karaf.testing*,
-                            !org.ops4j.pax.exam.junit.options,
                             org.ops4j.pax.swissbox.tinybundles*;resolution:=optional,
                             *
                         </Import-Package>
-                        <Include-Resource>
-                            {maven-resources},
-                            org/apache/karaf/testing/config.properties=target/classes/config.properties,
-                            org/apache/karaf/testing/jre.properties=target/classes/jre.properties,
-                            org/apache/karaf/testing/custom.properties=target/classes/custom.properties,
-                            org/apache/karaf/testing/startup.properties=target/classes/startup.properties
-                        </Include-Resource>
+                        <Private-Package>
+                            org.ops4j.pax.url.maven.commons,
+                            org.ops4j.util.property,
+                            org.ops4j.util.xml,
+                            org.ops4j.util.collections,
+                            org.ops4j.lang,
+                            org.ops4j.io,
+                            org.ops4j.monitors.*,
+                            org.apache.karaf.testing.container
+                        </Private-Package>
                         <_versionpolicy>${bnd.version.policy}</_versionpolicy>
                     </instructions>
                 </configuration>

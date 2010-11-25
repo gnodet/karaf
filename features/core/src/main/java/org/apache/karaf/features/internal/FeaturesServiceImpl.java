@@ -151,7 +151,9 @@ public class FeaturesServiceImpl implements FeaturesService {
         String[] s = uris.split(",");
         this.uris = new HashSet<URI>();
         for (String value : s) {
-            this.uris.add(new URI(value));
+            if (value != null && value.length() > 0) {
+                this.uris.add(new URI(value));
+            }
         }
     }
 
@@ -1074,7 +1076,7 @@ public class FeaturesServiceImpl implements FeaturesService {
         Set<Feature> features = new HashSet<Feature>();
         for (Map<String, Feature> featureMap : this.getFeatures().values()) {
             for (Feature f : featureMap.values()) {
-                if (f.getBundles().contains(bundle.getLocation())) {
+                if (f.getBundles().contains(bundle)) {
                     features.add(f);
                 }
             }

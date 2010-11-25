@@ -18,16 +18,7 @@
  */
 package org.apache.karaf.shell.console.jline;
 
-import java.io.CharArrayWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.InterruptedIOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.Reader;
+import java.io.*;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -219,8 +210,12 @@ public class Console implements Runnable
                                 + (t.getMessage() != null ? t.getMessage() : t.getClass().getName()));
                         session.getConsole().print(Ansi.ansi().fg(Ansi.Color.DEFAULT).toString());
                     }
-                } catch (Exception ignore) {
+                } catch (Throwable ignore) {
                         // ignore
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ignore.printStackTrace(new PrintWriter(baos));
+                    String str = baos.toString();
+                    System.err.println(str);
                 }
             }
         }

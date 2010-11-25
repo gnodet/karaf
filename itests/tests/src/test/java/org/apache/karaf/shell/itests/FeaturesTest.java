@@ -41,9 +41,9 @@ import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.CoreOptions.waitForFrameworkStartup;
 import static org.ops4j.pax.exam.OptionUtils.combine;
-import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.scanFeatures;
-
-import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.workingDirectory;
+//import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.scanFeatures;
+//
+//import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.workingDirectory;
 import static org.ops4j.pax.swissbox.tinybundles.core.TinyBundles.modifyBundle;
 
 @RunWith(JUnit4TestRunner.class)
@@ -71,12 +71,12 @@ public class FeaturesTest extends AbstractIntegrationTest {
                 systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("DEBUG")),
 
             // add two features
-            scanFeatures(
-                    maven().groupId("org.apache.karaf").artifactId("apache-karaf").type("xml").classifier("features").versionAsInProject(),
-                    "obr", "wrapper"
-            ),
-
-            workingDirectory("target/paxrunner/features/"),
+//            scanFeatures(
+//                    maven().groupId("org.apache.karaf").artifactId("apache-karaf").type("xml").classifier("features").versionAsInProject(),
+//                    "obr", "wrapper"
+//            ),
+//
+//            workingDirectory("target/paxrunner/features/"),
 
             waitForFrameworkStartup(),
             

@@ -33,18 +33,14 @@ import java.util.jar.Manifest;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Customizer;
 import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.exam.junit.options.JUnitBundlesOption;
+import org.ops4j.pax.exam.libraryoptions.JUnitBundlesOption;
 import org.ops4j.pax.exam.options.MavenArtifactProvisionOption;
 import org.ops4j.pax.exam.options.SystemPropertyOption;
 import org.osgi.framework.Constants;
 
-import static org.ops4j.pax.exam.CoreOptions.bootClasspathLibrary;
-import static org.ops4j.pax.exam.CoreOptions.bootDelegationPackages;
-import static org.ops4j.pax.exam.CoreOptions.frameworkStartLevel;
-import static org.ops4j.pax.exam.CoreOptions.maven;
-import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
+import static org.ops4j.pax.exam.CoreOptions.*;
 import static org.ops4j.pax.exam.OptionUtils.combine;
-import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.vmOption;
+//import static org.ops4j.pax.exam.container.def.PaxRunnerOptions.vmOption;
 import static org.ops4j.pax.swissbox.tinybundles.core.TinyBundles.modifyBundle;
 
 /**
@@ -171,7 +167,7 @@ public final class Helper {
      * @return a list of system properties for karaf
      */
     public static Properties getDefaultSystemOptions() {
-        return getDefaultSystemOptions("target/karaf.home");
+        return getDefaultSystemOptions(new File("target/karaf.home").getAbsolutePath());
     }
 
     /**
@@ -186,8 +182,9 @@ public final class Helper {
         sysProps.setProperty("karaf.name", "root");
         sysProps.setProperty("karaf.home", karafHome);
         sysProps.setProperty("karaf.base", karafHome);
+        sysProps.setProperty("karaf.data", karafHome + "/data");
         sysProps.setProperty("karaf.startLocalConsole", "false");
-        sysProps.setProperty("karaf.startRemoteShell", "false");
+        sysProps.setProperty("karaf.startRemoteShell", "true");
         sysProps.setProperty("org.osgi.framework.startlevel.beginning", "100");
         return sysProps;
     }
@@ -201,7 +198,7 @@ public final class Helper {
      */
     public static Option[] getDefaultConfigOptions(SystemPropertyOption... sysOptions) {
         return getDefaultConfigOptions(getDefaultSystemOptions(),
-                                       getResource("/org/apache/karaf/testing/config.properties"),
+                                       getResource("org/apache/karaf/testing/config.properties"),
                                        sysOptions);
     }
 
@@ -218,7 +215,10 @@ public final class Helper {
     public static Option[] getDefaultConfigOptions(Properties sysProps, URL configProperties, SystemPropertyOption... sysOptions) {
         // Load props
         Properties configProps = loadProperties(configProperties);
-
+        // Default log level
+        if (!configProps.containsKey("org.ops4j.pax.logging.DefaultServiceLog.level")) {
+            configProps.setProperty("org.ops4j.pax.logging.DefaultServiceLog.level", "DEBUG");
+        }
         // Set system props
         for (Enumeration e = sysProps.propertyNames(); e.hasMoreElements();) {
             String key = (String) e.nextElement();
@@ -229,40 +229,36 @@ public final class Helper {
             String name = (String) e.nextElement();
             configProps.setProperty(name, substVars(configProps.getProperty(name), name, null, configProps));
         }
+        // add test-specific system properties
+        if (sysOptions != null) {
+            for (SystemPropertyOption sysOption : sysOptions) {
+                configProps.setProperty(sysOption.getKey(), sysOption.getValue());
+            }
+        }
         // Transform system properties to VM options
         List<Option> options = new ArrayList<Option>();
-        String vmOptions = "";
         for (Enumeration e = configProps.propertyNames(); e.hasMoreElements();) {
             String name = (String) e.nextElement();
             String value = configProps.getProperty(name);
             value = align(value);
             if ("org.osgi.framework.system.packages".equals(name)) {
+                options.add(systemPackage( value ));
             	String extra = align(configProps.getProperty("org.osgi.framework.system.packages.extra"));
             	if (extra != null && extra.length() > 0) {
-                	vmOptions = vmOptions + " -D" + name + "=" + value + "," + extra;
-                } else {
-                	vmOptions = vmOptions + " -D" + name + "=" + value;
+                	options.add(systemPackage( extra ));
                 }
             } else if ("org.osgi.framework.bootdelegation".equals(name)) {
                 options.add(bootDelegationPackages(value));
             } else {
-                vmOptions = vmOptions + " -D" + name + "=" + value;
+                options.add(systemProperty(name).value(value));
             }
         }
 
-        // add test-specific system properties
-        if (sysOptions != null) {
-            for (SystemPropertyOption sysOption : sysOptions) {
-                vmOptions = vmOptions + " -D" + sysOption.getKey() + "=" + sysOption.getValue();
-            }
-        }
 
         if (configProps.getProperty("org.osgi.framework.startlevel.beginning") != null) {
             options.add(frameworkStartLevel(Integer.parseInt(configProps.getProperty("org.osgi.framework.startlevel.beginning"))));
         }
 
-        options.add(vmOption(vmOptions));
- 
         return options.toArray(new Option[options.size()]);
     }
 
@@ -273,7 +269,7 @@ public final class Helper {
      */
     public static Option[] getDefaultProvisioningOptions() {
         return getDefaultProvisioningOptions(getDefaultSystemOptions(),
-                                            getResource("/org/apache/karaf/testing/startup.properties"));
+                                            getResource("org/apache/karaf/testing/startup.properties"));
     }
 
     /**
@@ -306,7 +302,6 @@ public final class Helper {
             options.add(opt);
         }
         options.add(mavenBundle("org.apache.karaf.tooling", "org.apache.karaf.tooling.testing"));
-        options.add(wrappedBundle(mavenBundle("org.ops4j.pax.exam", "pax-exam-container-default")));
         // We need to add pax-exam-junit here when running with the ibm
         // jdk to avoid the following exception during the test run:
         // ClassNotFoundException: org.ops4j.pax.exam.junit.Configuration
@@ -397,7 +392,7 @@ public final class Helper {
             url = Thread.currentThread().getContextClassLoader().getResource(location);
         }
         if (url == null) {
-            url = Helper.class.getResource(location);
+            url = Helper.class.getClassLoader().getResource(location);
         }
         if (url == null) {
             throw new RuntimeException("Unable to find resource " + location);
