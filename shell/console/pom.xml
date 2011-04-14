@@ -34,6 +34,7 @@
 
     <properties>
         <appendedResourcesDirectory>${basedir}/../../etc/appended-resources</appendedResourcesDirectory>
+        <jline.version>2.6-SNAPSHOT</jline.version>
     </properties>
 
     <dependencies>
@@ -43,8 +44,9 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.sonatype.jline</groupId>
+            <groupId>jline</groupId>
             <artifactId>jline</artifactId>
+            <version>${jline.version}</version>
         </dependency>
         <dependency>
             <groupId>org.fusesource.jansi</groupId>

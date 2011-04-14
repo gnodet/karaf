@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.util.Map;
 import java.util.Properties;
@@ -97,8 +96,7 @@ public class Console implements Runnable
         this.closeCallback = closeCallback;
 
         reader = new ConsoleReader(this.consoleInput,
-                                   new PrintWriter(this.out),
-                                   getClass().getResourceAsStream("keybinding.properties"),
+                                   this.out,
                                    this.terminal);
 
         final File file = getHistoryFile();
@@ -139,9 +137,6 @@ public class Console implements Runnable
         Completer completer = createCompleter();
         if (completer != null) {
             reader.addCompleter(new CompleterAsCompletor(completer));
-        }
-        if (Boolean.getBoolean("jline.nobell")) {
-            reader.setBellEnabled(false);
         }
         pipe = new Thread(new Pipe());
         pipe.setName("gogo shell pipe thread");
@@ -475,11 +470,12 @@ public class Console implements Runnable
         public void run()
         {
             try {
+                InputStream input = terminal.wrapInIfNeeded(Console.this.in);
                 while (running)
                 {
                     try
                     {
-                        int c = terminal.readCharacter(in);
+                        int c = input.read();
                         if (c == -1)
                         {
                             return;
@@ -488,6 +484,7 @@ public class Console implements Runnable
                         {
                             err.println("^D");
                             queue.put(c);
+                            break;
                         }
                         else if (c == 3)
                         {
@@ -502,8 +499,9 @@ public class Console implements Runnable
                         return;
                     }
                 }
-            }
-            finally
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally
             {
                 eof = true;
                 try

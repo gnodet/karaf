@@ -18,18 +18,17 @@
  */
 package org.apache.karaf.shell.console.jline;
 
-import jline.Terminal;
-import jline.UnsupportedTerminal;
-import jline.AnsiWindowsTerminal;
-import jline.NoInterruptUnixTerminal;
-import org.fusesource.jansi.internal.WindowsSupport;
-
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+
+import jline.AnsiWindowsTerminal;
+import jline.NoInterruptUnixTerminal;
+import jline.Terminal;
+import jline.UnsupportedTerminal;
 
 public class TerminalFactory {
 
@@ -79,19 +78,8 @@ public class TerminalFactory {
             super();
         }
 
-        @Override
-        public int readCharacter(InputStream in) throws IOException {
-            if (isSystemIn(in)) {
-                return WindowsSupport.readByte();
-            }
-            else {
-                return super.readCharacter(in);
-            }
-        }
-
-        private boolean isSystemIn(InputStream in) throws IOException {
+        protected boolean isSystemIn(InputStream in) throws IOException {
             assert in != null;
-
             if (in == System.in) {
                 return true;
             }
