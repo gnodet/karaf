@@ -97,6 +97,14 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Export-Package>${project.artifactId}*;version=${project.version}</Export-Package>
+                        <_versionpolicy>${bnd.version.policy}</_versionpolicy>
+                        <Karaf-Injection>*</Karaf-Injection>
+                    </instructions>
+                </configuration>
             </plugin>
         </plugins>
     </build>
