@@ -34,7 +34,7 @@ import java.util.Set;
 
 /**
  * <p>A factory for user authentication factories to set on
- * {@link SshServer#setUserAuthFactories(java.util.List)} based on a
+ * {@link org.apache.sshd.SshServer#setUserAuthFactories(java.util.List)} based on a
  * comma-separated list of authentication methods.</p>
  *
  * <p>Currently, the following methods are supported:</p>
@@ -64,7 +64,7 @@ public class UserAuthFactoriesFactory {
      * <code>Class X implements NameFactory</code>
      * to the reified type <code>cNameFactory</code>
      * and therefore helps blueprint to set the returned factories on
-     * {@link SshServerAction#setUserAuthFactories(List)} without complaining
+     * {@link org.apache.sshd.SshServer#setUserAuthFactories(List)} without complaining
      * about type conversion errors.
      */
     public static class Converter implements org.osgi.service.blueprint.container.Converter {
