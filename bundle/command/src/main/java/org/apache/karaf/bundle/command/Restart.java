@@ -19,9 +19,9 @@ package org.apache.karaf.bundle.command;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.console.MultiException;
-import org.apache.karaf.shell.inject.Service;
+import org.apache.karaf4.shell.api.action.Command;
+import org.apache.karaf4.shell.api.action.lifecycle.Service;
 import org.osgi.framework.Bundle;
 
 @Command(scope = "bundle", name = "restart", description = "Restarts bundles.")

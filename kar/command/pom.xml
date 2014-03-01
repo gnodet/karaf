@@ -89,6 +89,7 @@
                 <configuration>
                     <instructions>
                         <Export-Package>!*</Export-Package>
+                        <Karaf-Commands>org.apache.karaf.kar.command.*</Karaf-Commands>
                     </instructions>
                 </configuration>
             </plugin>

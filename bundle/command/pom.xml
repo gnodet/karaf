@@ -107,6 +107,7 @@
                             org.apache.felix.utils.version;-split-package:=merge-first,
                             org.apache.felix.utils.manifest;-split-package:=merge-first
                         </Private-Package>
+                        <Karaf-Commands>org.apache.karaf.bundle.command.*</Karaf-Commands>
                     </instructions>
                 </configuration>
             </plugin>

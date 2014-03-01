@@ -129,6 +129,7 @@
                             org.apache.karaf.instance.command,
                             org.apache.karaf.instance.command.completers
                         </Private-Package>
+                        <Karaf-Commands>org.apache.karaf.instance.command.*</Karaf-Commands>
                     </instructions>
                 </configuration>
             </plugin>
