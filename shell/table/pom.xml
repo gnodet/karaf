@@ -39,8 +39,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.karaf.shell</groupId>
-            <artifactId>org.apache.karaf.shell.console</artifactId>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

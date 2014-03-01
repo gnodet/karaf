@@ -65,6 +65,10 @@
             <groupId>org.apache.karaf.jaas</groupId>
             <artifactId>org.apache.karaf.jaas.boot</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.shell</groupId>
+            <artifactId>org.apache.karaf.shell.table</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.aries.blueprint</groupId>
@@ -84,6 +88,11 @@
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.utils</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf</groupId>
+            <artifactId>org.apache.karaf.util</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -141,6 +150,7 @@
                             *
                         </Import-Package>
                         <Export-Package>
+                            org.apache.karaf4.shell.*;version=1.0.0,
                         	org.apache.karaf.shell.commands;version=${project.version},
                             org.apache.karaf.shell.commands;version=2.3.0,
                             org.apache.karaf.shell.commands.basic;version=${project.version},
@@ -168,11 +178,12 @@
                         	org.apache.karaf.shell.console.impl*,
                             org.apache.karaf.shell.security.impl*,
                             org.apache.karaf.shell.inject.impl*,
+                            org.apache.karaf.util.properties,
                             org.apache.felix.utils.extender,
                             org.apache.felix.utils.manifest
                         </Private-Package>
                         <Bundle-Activator>
-                            org.apache.felix.gogo.runtime.activator.Activator
+                            org.apache.karaf4.shell.impl.console.osgi.Activator
                         </Bundle-Activator>
                         <Main-Class>
                             org.apache.karaf.shell.console.impl.Main
