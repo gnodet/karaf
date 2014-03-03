@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.karaf4.shell.api.action.Argument;
+import org.apache.karaf4.shell.api.action.Command;
 import org.apache.karaf4.shell.api.action.Completion;
 import org.apache.karaf4.shell.api.action.Option;
 import org.apache.karaf4.shell.api.console.CommandLine;
@@ -59,7 +60,7 @@ public class ArgumentCompleter implements Completer {
         this.command = command;
         Class<?> actionClass = command.getActionClass();
         // Command name completer
-        org.apache.karaf4.shell.api.action.Command cmd = actionClass.getAnnotation(org.apache.karaf4.shell.api.action.Command.class);
+        Command cmd = actionClass.getAnnotation(Command.class);
         String[] names = scoped || Session.SCOPE_GLOBAL.equals(cmd.scope()) ? new String[] { cmd.name() } : new String[] { cmd.name(), cmd.scope() + ":" + cmd.name() };
         commandCompleter = new StringsCompleter(names);
         // Build options completer

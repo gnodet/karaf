@@ -18,14 +18,27 @@
  */
 package org.apache.karaf4.shell.impl.action.command;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.karaf4.shell.api.action.Action;
 import org.apache.karaf4.shell.api.action.Argument;
@@ -45,27 +58,43 @@ import static org.apache.karaf4.shell.support.ansi.SimpleAnsi.INTENSITY_NORMAL;
 public class DefaultActionPreparator {
 
     public boolean prepare(Action action, Session session, List<Object> params) throws Exception {
-        ActionMetaData actionMetaData = new ActionMetaDataFactory().create(action.getClass());
-        Map<Option, Field> options = actionMetaData.getOptions();
-        Map<Argument, Field> arguments = actionMetaData.getArguments();
-        List<Argument> orderedArguments = actionMetaData.getOrderedArguments();
-        Command command2 = actionMetaData.getCommand();
 
-        if (command2 == null) {
-            // to avoid NPE with subshell
-            return true;
+        Command command = action.getClass().getAnnotation(Command.class);
+        Map<Option, Field> options = new HashMap<Option, Field>();
+        Map<Argument, Field> arguments = new HashMap<Argument, Field>();
+        List<Argument> orderedArguments = new ArrayList<Argument>();
+
+        for (Class<?> type = action.getClass(); type != null; type = type.getSuperclass()) {
+            for (Field field : type.getDeclaredFields()) {
+                Option option = field.getAnnotation(Option.class);
+                if (option != null) {
+                    options.put(option, field);
+                }
+
+                Argument argument = field.getAnnotation(Argument.class);
+                if (argument != null) {
+                    argument = replaceDefaultArgument(field, argument);
+                    arguments.put(argument, field);
+                    int index = argument.index();
+                    while (orderedArguments.size() <= index) {
+                        orderedArguments.add(null);
+                    }
+                    if (orderedArguments.get(index) != null) {
+                        throw new IllegalArgumentException("Duplicate argument index: " + index + " on Action " + action.getClass().getName());
+                    }
+                    orderedArguments.set(index, argument);
+                }
+            }
         }
+        assertIndexesAreCorrect(action.getClass(), orderedArguments);
 
-        String commandErrorSt = (command2 != null) ? COLOR_RED
-                + "Error executing command " + command2.scope() + ":" 
-                + INTENSITY_BOLD + command2.name() + INTENSITY_NORMAL
-                + COLOR_DEFAULT + ": " : "";
+        String commandErrorSt = COLOR_RED + "Error executing command " + command.scope() + ":" + INTENSITY_BOLD + command.name() + INTENSITY_NORMAL + COLOR_DEFAULT + ": ";
         for (Iterator<Object> it = params.iterator(); it.hasNext(); ) {
             Object param = it.next();
             if (HelpOption.HELP.name().equals(param)) {
                 int termWidth = session.getTerminal() != null ? session.getTerminal().getWidth() : 80;
-                boolean globalScope = NameScoping.isGlobalScope(session, actionMetaData.getCommand().scope());
-                actionMetaData.printUsage(action, System.out, globalScope, termWidth);
+                boolean globalScope = NameScoping.isGlobalScope(session, command.scope());
+                printUsage(action, options, arguments, System.out, globalScope, termWidth);
                 return false;
             }
         }
@@ -211,6 +240,242 @@ public class DefaultActionPreparator {
             return value != null ? value.toString() : null;
         }
         return new DefaultConverter(action.getClass().getClassLoader()).convert(value, toType);
+    }
+
+    private Argument replaceDefaultArgument(Field field, Argument argument) {
+        if (Argument.DEFAULT.equals(argument.name())) {
+            final Argument delegate = argument;
+            final String name = field.getName();
+            argument = new Argument() {
+                public String name() {
+                    return name;
+                }
+
+                public String description() {
+                    return delegate.description();
+                }
+
+                public boolean required() {
+                    return delegate.required();
+                }
+
+                public int index() {
+                    return delegate.index();
+                }
+
+                public boolean multiValued() {
+                    return delegate.multiValued();
+                }
+
+                public String valueToShowInHelp() {
+                    return delegate.valueToShowInHelp();
+                }
+
+                public Class<? extends Annotation> annotationType() {
+                    return delegate.annotationType();
+                }
+            };
+        }
+        return argument;
+    }
+
+    private void assertIndexesAreCorrect(Class<? extends Action> actionClass, List<Argument> orderedArguments) {
+        for (int i = 0; i < orderedArguments.size(); i++) {
+            if (orderedArguments.get(i) == null) {
+                throw new IllegalArgumentException("Missing argument for index: " + i + " on Action " + actionClass.getName());
+            }
+        }
+    }
+
+    public void printUsage(Action action, Map<Option, Field> options, Map<Argument, Field> arguments, PrintStream out, boolean globalScope, int termWidth) {
+        Command command = action.getClass().getAnnotation(Command.class);
+        if (command != null) {
+            List<Argument> argumentsSet = new ArrayList<Argument>(arguments.keySet());
+            Collections.sort(argumentsSet, new Comparator<Argument>() {
+                public int compare(Argument o1, Argument o2) {
+                    return Integer.valueOf(o1.index()).compareTo(Integer.valueOf(o2.index()));
+                }
+            });
+            Set<Option> optionsSet = new HashSet<Option>(options.keySet());
+            optionsSet.add(HelpOption.HELP);
+            if (command != null && (command.description() != null || command.name() != null)) {
+                out.println(INTENSITY_BOLD + "DESCRIPTION" + INTENSITY_NORMAL);
+                out.print("        ");
+                if (command.name() != null) {
+                    if (globalScope) {
+                        out.println(INTENSITY_BOLD + command.name() + INTENSITY_NORMAL);
+                    } else {
+                        out.println(command.scope() + ":" + INTENSITY_BOLD + command.name() + INTENSITY_NORMAL);
+                    }
+                    out.println();
+                }
+                out.print("\t");
+                out.println(command.description());
+                out.println();
+            }
+            StringBuffer syntax = new StringBuffer();
+            if (command != null) {
+                if (globalScope) {
+                    syntax.append(command.name());
+                } else {
+                    syntax.append(String.format("%s:%s", command.scope(), command.name()));
+                }
+            }
+            if (options.size() > 0) {
+                syntax.append(" [options]");
+            }
+            if (arguments.size() > 0) {
+                syntax.append(' ');
+                for (Argument argument : argumentsSet) {
+                    if (!argument.required()) {
+                        syntax.append(String.format("[%s] ", argument.name()));
+                    } else {
+                        syntax.append(String.format("%s ", argument.name()));
+                    }
+                }
+            }
+
+            out.println(INTENSITY_BOLD + "SYNTAX" + INTENSITY_NORMAL);
+            out.print("        ");
+            out.println(syntax.toString());
+            out.println();
+            if (arguments.size() > 0) {
+                out.println(INTENSITY_BOLD + "ARGUMENTS" + INTENSITY_NORMAL);
+                for (Argument argument : argumentsSet) {
+                    out.print("        ");
+                    out.println(INTENSITY_BOLD + argument.name() + INTENSITY_NORMAL);
+                    printFormatted("                ", argument.description(), termWidth, out, true);
+                    if (!argument.required()) {
+                        if (argument.valueToShowInHelp() != null && argument.valueToShowInHelp().length() != 0) {
+                            if (Argument.DEFAULT_STRING.equals(argument.valueToShowInHelp())) {
+                                Object o = getDefaultValue(action, arguments.get(argument));
+                                String defaultValue = getDefaultValueString(o);
+                                if (defaultValue != null) {
+                                    printDefaultsTo(out, defaultValue);
+                                }
+                            } else {
+                                printDefaultsTo(out, argument.valueToShowInHelp());
+                            }
+                        }
+                    }
+                }
+                out.println();
+            }
+            if (options.size() > 0) {
+                out.println(INTENSITY_BOLD + "OPTIONS" + INTENSITY_NORMAL);
+                for (Option option : optionsSet) {
+                    String opt = option.name();
+                    for (String alias : option.aliases()) {
+                        opt += ", " + alias;
+                    }
+                    out.print("        ");
+                    out.println(INTENSITY_BOLD + opt + INTENSITY_NORMAL);
+                    printFormatted("                ", option.description(), termWidth, out, true);
+                    if (option.valueToShowInHelp() != null && option.valueToShowInHelp().length() != 0) {
+                        if (Option.DEFAULT_STRING.equals(option.valueToShowInHelp())) {
+                            Object o = getDefaultValue(action, options.get(option));
+                            String defaultValue = getDefaultValueString(o);
+                            if (defaultValue != null) {
+                                printDefaultsTo(out, defaultValue);
+                            }
+                        } else {
+                            printDefaultsTo(out, option.valueToShowInHelp());
+                        }
+                    }
+                }
+                out.println();
+            }
+            if (command.detailedDescription().length() > 0) {
+                out.println(INTENSITY_BOLD + "DETAILS" + INTENSITY_NORMAL);
+                String desc = loadDescription(action.getClass(), command.detailedDescription());
+                printFormatted("        ", desc, termWidth, out, true);
+            }
+        }
+    }
+
+    public Object getDefaultValue(Action action, Field field) {
+        try {
+            field.setAccessible(true);
+            return field.get(action);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String loadDescription(Class<?> clazz, String desc) {
+        if (desc != null && desc.startsWith("classpath:")) {
+            desc = loadClassPathResource(clazz, desc.substring("classpath:".length()));
+        }
+        return desc;
+    }
+
+    public String getDefaultValueString(Object o) {
+        if (o != null
+                && (!(o instanceof Boolean) || ((Boolean) o))
+                && (!(o instanceof Number) || ((Number) o).doubleValue() != 0.0)) {
+            return o.toString();
+        } else {
+            return null;
+        }
+    }
+
+    private void printDefaultsTo(PrintStream out, String value) {
+        out.println("                (defaults to " + value + ")");
+    }
+
+    static void printFormatted(String prefix, String str, int termWidth, PrintStream out, boolean prefixFirstLine) {
+        int pfxLen = prefix.length();
+        int maxwidth = termWidth - pfxLen;
+        Pattern wrap = Pattern.compile("(\\S\\S{" + maxwidth + ",}|.{1," + maxwidth + "})(\\s+|$)");
+        int cur = 0;
+        while (cur >= 0) {
+            int lst = str.indexOf('\n', cur);
+            String s = (lst >= 0) ? str.substring(cur, lst) : str.substring(cur);
+            if (s.length() == 0) {
+                out.println();
+            } else {
+                Matcher m = wrap.matcher(s);
+                while (m.find()) {
+                    if (cur > 0 || prefixFirstLine) {
+                        out.print(prefix);
+                    }
+                    out.println(m.group());
+                }
+            }
+            if (lst >= 0) {
+                cur = lst + 1;
+            } else {
+                break;
+            }
+        }
+    }
+
+    private String loadClassPathResource(Class<?> clazz, String path) {
+        InputStream is = clazz.getResourceAsStream(path);
+        if (is == null) {
+            is = clazz.getClassLoader().getResourceAsStream(path);
+        }
+        if (is == null) {
+            return "Unable to load description from " + path;
+        }
+
+        try {
+            Reader r = new InputStreamReader(is);
+            StringWriter sw = new StringWriter();
+            int c;
+            while ((c = r.read()) != -1) {
+                sw.append((char) c);
+            }
+            return sw.toString();
+        } catch (IOException e) {
+            return "Unable to load description from " + path;
+        } finally {
+            try {
+                is.close();
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
     }
 
 }
