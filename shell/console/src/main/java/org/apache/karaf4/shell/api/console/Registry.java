@@ -17,10 +17,13 @@
 package org.apache.karaf4.shell.api.console;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public interface Registry {
 
     List<Command> getCommands();
+
+    <T> void register(Callable<T> factory, Class<T> clazz);
 
     void register(Object service);
 
@@ -29,5 +32,7 @@ public interface Registry {
     <T> T getService(Class<T> clazz);
 
     <T> List<T> getServices(Class<T> clazz);
+
+    boolean hasService(Class<?> clazz);
 
 }

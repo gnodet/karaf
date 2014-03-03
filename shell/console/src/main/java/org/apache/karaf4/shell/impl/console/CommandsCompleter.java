@@ -31,9 +31,11 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.karaf4.shell.api.console.Command;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.api.console.SessionFactory;
+import org.apache.karaf4.shell.impl.console.parsing.CommandLineBuilder;
 import org.apache.karaf4.shell.support.completers.AggregateCompleter;
 import org.apache.karaf4.shell.support.completers.StringsCompleter;
 
@@ -52,7 +54,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
         this.factory = factory;
     }
 
-    public int complete(Session session, String buffer, int cursor, List<String> candidates) {
+    public int complete(Session session, CommandLine commandLine, List<String> candidates) {
         Map<String, Completer>[] allCompleters = checkData();
 
         List<String> scopes = getCurrentScopes(session);
@@ -64,7 +66,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
         // SUBSHELL mode
         if (Session.COMPLETION_MODE_SUBSHELL.equalsIgnoreCase(completion)) {
             if (subShell.isEmpty()) {
-                subShell = "*";
+                subShell = Session.SCOPE_GLOBAL;
             }
             List<Completer> completers = new ArrayList<Completer>();
             for (String name : allCompleters[1].keySet()) {
@@ -72,10 +74,10 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
                     completers.add(allCompleters[1].get(name));
                 }
             }
-            if (!subShell.equals("*")) {
+            if (!subShell.equals(Session.SCOPE_GLOBAL)) {
                 completers.add(new StringsCompleter(new String[] { "exit" }));
             }
-            int res = new AggregateCompleter(completers).complete(session, buffer, cursor, candidates);
+            int res = new AggregateCompleter(completers).complete(session, commandLine, candidates);
             Collections.sort(candidates);
             return res;
         }
@@ -88,7 +90,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
                         completers.add(allCompleters[1].get(name));
                     }
                 }
-                int res = new AggregateCompleter(completers).complete(session, buffer, cursor, candidates);
+                int res = new AggregateCompleter(completers).complete(session, commandLine, candidates);
                 if (!candidates.isEmpty()) {
                     Collections.sort(candidates);
                     return res;
@@ -97,7 +99,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
             List<Completer> compl = new ArrayList<Completer>();
             compl.add(new StringsCompleter(getAliases(session)));
             compl.addAll(allCompleters[0].values());
-            int res = new AggregateCompleter(compl).complete(session, buffer, cursor, candidates);
+            int res = new AggregateCompleter(compl).complete(session, commandLine, candidates);
             Collections.sort(candidates);
             return res;
         }
@@ -105,7 +107,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
         List<Completer> compl = new ArrayList<Completer>();
         compl.add(new StringsCompleter(getAliases(session)));
         compl.addAll(allCompleters[0].values());
-        int res = new AggregateCompleter(compl).complete(session, buffer, cursor, candidates);
+        int res = new AggregateCompleter(compl).complete(session, commandLine, candidates);
         Collections.sort(candidates);
         return res;
     }
@@ -204,7 +206,7 @@ public class CommandsCompleter extends org.apache.karaf4.shell.support.completer
                 Completer cg = command.getCompleter(false);
                 Completer cl = command.getCompleter(true);
                 if (cg == null) {
-                    if ("*".equals(command.getScope())) {
+                    if (Session.SCOPE_GLOBAL.equals(command.getScope())) {
                         cg = new StringsCompleter(new String[] { command.getName() });
                     } else {
                         cg = new StringsCompleter(new String[] { key, command.getName() });

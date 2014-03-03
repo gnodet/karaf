@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.karaf.features.FeaturesService;
 import org.apache.karaf4.shell.api.action.lifecycle.Reference;
 import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.support.completers.StringsCompleter;
@@ -39,9 +40,9 @@ public class AvailableRepoNameCompleter implements Completer {
         this.featuresService = featuresService;
     }
 
-    public int complete(Session session, String buffer, final int cursor, final List<String> candidates) {
+    public int complete(Session session, CommandLine commandLine, final List<String> candidates) {
         StringsCompleter delegate = new StringsCompleter(Arrays.asList(featuresService.getRepositoryNames()));
-        return delegate.complete(session, buffer, cursor, candidates);
+        return delegate.complete(session, commandLine, candidates);
     }
 
 }

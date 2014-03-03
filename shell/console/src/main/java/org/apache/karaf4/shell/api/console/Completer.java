@@ -22,6 +22,6 @@ import java.util.List;
 
 public interface Completer {
 
-    int complete(Session session, String buffer, int cursor, List<String> candidates);
+    int complete(Session session, CommandLine commandLine, List<String> candidates);
 
 }

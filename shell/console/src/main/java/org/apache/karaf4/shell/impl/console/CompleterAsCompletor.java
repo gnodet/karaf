@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
+import org.apache.karaf4.shell.impl.console.parsing.CommandLineBuilder;
 
 public class CompleterAsCompletor implements jline.console.completer.Completer {
 
@@ -34,7 +35,7 @@ public class CompleterAsCompletor implements jline.console.completer.Completer {
     }
 
     public int complete(String buffer, int cursor, List candidates) {
-        return completer.complete(session, buffer, cursor, candidates);
+        return completer.complete(session, CommandLineBuilder.build(buffer, cursor), candidates);
     }
 
 }

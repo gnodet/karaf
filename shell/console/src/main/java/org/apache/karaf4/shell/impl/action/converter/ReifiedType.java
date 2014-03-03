@@ -67,7 +67,7 @@ public class ReifiedType {
 	 *
 	 * @return the collapsed raw class that represents this type.
 	 */
-	public Class getRawClass() {
+	public Class<?> getRawClass() {
 		return clazz;
 	}
 

@@ -17,7 +17,7 @@ public abstract class TopLevelCommand implements Command {
 
     @Override
     public String getScope() {
-        return "*";
+        return Session.SCOPE_GLOBAL;
     }
 
     @Override

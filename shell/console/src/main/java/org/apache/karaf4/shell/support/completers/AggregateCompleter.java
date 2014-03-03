@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 
@@ -41,7 +42,7 @@ public class AggregateCompleter implements Completer
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public int complete(final Session session, final String buffer, final int cursor, final List candidates) {
+    public int complete(final Session session, final CommandLine commandLine, final List candidates) {
         // buffer could be null
         assert candidates != null;
 
@@ -51,20 +52,22 @@ public class AggregateCompleter implements Completer
         int max = -1;
         for (Completer completer : completers) {
             Completion completion = new Completion(candidates);
-            completion.complete(session, completer, buffer, cursor);
+            completion.complete(session, completer, commandLine);
 
             // Compute the max cursor position
-            max = Math.max(max, completion.cursor);
-
-            completions.add(completion);
+            if (completion.cursor > max) {
+                completions.clear();
+                completions.add(completion);
+                max = completion.cursor;
+            } else if (completion.cursor == max) {
+                completions.add(completion);
+            }
         }
 
         // Append candidates from completions which have the same cursor position as max
         for (Completion completion : completions) {
-            if (completion.cursor == max) {
-                // noinspection unchecked
-                candidates.addAll(completion.candidates);
-            }
+            // noinspection unchecked
+            candidates.addAll(completion.candidates);
         }
 
         return max;
@@ -84,10 +87,10 @@ public class AggregateCompleter implements Completer
             this.candidates = new LinkedList<String>(candidates);
         }
 
-        public void complete(final Session session, final Completer completer, final String buffer, final int cursor) {
+        public void complete(final Session session, final Completer completer, final CommandLine commandLine) {
             assert completer != null;
 
-            this.cursor = completer.complete(session, buffer, cursor, candidates);
+            this.cursor = completer.complete(session, commandLine, candidates);
         }
     }
 }

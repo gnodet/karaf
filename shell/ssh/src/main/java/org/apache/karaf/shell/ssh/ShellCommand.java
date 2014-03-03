@@ -25,12 +25,11 @@ import java.util.Map;
 
 import javax.security.auth.Subject;
 
-import org.apache.felix.service.command.CommandProcessor;
-import org.apache.felix.service.command.CommandSession;
-import org.apache.felix.service.command.Converter;
 import org.apache.karaf.jaas.modules.JaasHelper;
-import org.apache.karaf.shell.util.ShellUtil;
 import org.apache.karaf.util.StreamUtils;
+import org.apache.karaf4.shell.api.console.Session;
+import org.apache.karaf4.shell.api.console.SessionFactory;
+import org.apache.karaf4.shell.support.ShellUtil;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;
 import org.apache.sshd.server.ExitCallback;
@@ -57,10 +56,10 @@ public class ShellCommand implements Command, SessionAware {
     private OutputStream err;
     private ExitCallback callback;
     private ServerSession session;
-    private CommandProcessor commandProcessor;
+    private SessionFactory sessionFactory;
 
-    public ShellCommand(CommandProcessor commandProcessor, String command) {
-        this.commandProcessor = commandProcessor;
+    public ShellCommand(SessionFactory sessionFactory, String command) {
+        this.sessionFactory = sessionFactory;
         this.command = command;
     }
 
@@ -86,8 +85,8 @@ public class ShellCommand implements Command, SessionAware {
 
     public void start(final Environment env) throws IOException {
         try {
-            final CommandSession session = commandProcessor.createSession(in, new PrintStream(out), new PrintStream(err));
-            session.put("SCOPE", "shell:osgi:*");
+            final Session session = sessionFactory.createSession(in, new PrintStream(out), new PrintStream(err));
+            session.put(Session.SCOPE, "shell:osgi:*");
             session.put("APPLICATION", System.getProperty("karaf.name", "root"));
             for (Map.Entry<String,String> e : env.getEnv().entrySet()) {
                 session.put(e.getKey(), e.getValue());
@@ -114,7 +113,8 @@ public class ShellCommand implements Command, SessionAware {
                 }
                 if (result != null)
                 {
-                    session.getConsole().println(session.format(result, Converter.INSPECT));
+                    // TODO: print the result of the command ?
+//                    session.getConsole().println(session.format(result, Converter.INSPECT));
                 }
             } catch (Throwable t) {
                 ShellUtil.logException(session, t);
@@ -130,7 +130,7 @@ public class ShellCommand implements Command, SessionAware {
     public void destroy() {
 	}
 
-    private void executeScript(String scriptFileName, CommandSession session) {
+    private void executeScript(String scriptFileName, Session session) {
         if (scriptFileName != null) {
             Reader r = null;
             try {

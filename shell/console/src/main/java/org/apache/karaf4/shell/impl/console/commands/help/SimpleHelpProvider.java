@@ -41,8 +41,7 @@ public class SimpleHelpProvider implements HelpProvider {
                 return null;
             }
         }
-        String str = help.get(path);
-        return str;
+        return help.get(path);
     }
 
 }

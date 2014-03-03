@@ -22,6 +22,7 @@ import org.apache.karaf.features.FeaturesService;
 import org.apache.karaf.features.Repository;
 import org.apache.karaf4.shell.api.action.lifecycle.Reference;
 import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.support.completers.StringsCompleter;
@@ -43,7 +44,7 @@ public class InstalledRepoUriCompleter implements Completer {
         this.featuresService = featuresService;
     }
 
-    public int complete(Session session, final String buffer, final int cursor, final List<String> candidates) {
+    public int complete(Session session, final CommandLine commandLine, final List<String> candidates) {
         StringsCompleter delegate = new StringsCompleter();
         try {
             for (Repository repository : featuresService.listRepositories()) {
@@ -52,7 +53,7 @@ public class InstalledRepoUriCompleter implements Completer {
         } catch (Exception e) {
             // Ignore
         }
-        return delegate.complete(session, buffer, cursor, candidates);
+        return delegate.complete(session, commandLine, candidates);
     }
 
 }

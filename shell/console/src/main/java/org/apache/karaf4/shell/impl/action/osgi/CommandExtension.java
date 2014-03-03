@@ -37,6 +37,7 @@ import org.apache.karaf4.shell.api.action.lifecycle.Destroy;
 import org.apache.karaf4.shell.api.action.lifecycle.Init;
 import org.apache.karaf4.shell.api.action.lifecycle.Reference;
 import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.History;
 import org.apache.karaf4.shell.api.console.Registry;
@@ -44,6 +45,8 @@ import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.api.console.SessionFactory;
 import org.apache.karaf4.shell.api.console.Terminal;
 import org.apache.karaf4.shell.impl.action.command.ActionCommand;
+import org.apache.karaf4.shell.impl.action.converter.GenericType;
+import org.apache.karaf4.shell.impl.action.converter.ReifiedType;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
@@ -147,12 +150,15 @@ public class CommandExtension implements Extension, Satisfiable {
             for (Class<?> cl = clazz; cl != Object.class; cl = cl.getSuperclass()) {
                 for (Field field : cl.getDeclaredFields()) {
                     if (field.getAnnotation(Reference.class) != null) {
+                        GenericType type = new GenericType(field.getType());
+                        Class clazzRef = type.getRawClass() == List.class ? type.getActualTypeArgument(0).getRawClass() : type.getRawClass();
                         if (field.getType() != BundleContext.class
                                 && field.getType() != Session.class
                                 && field.getType() != Terminal.class
                                 && field.getType() != History.class
                                 && field.getType() != Registry.class
-                                && field.getType() != SessionFactory.class) {
+                                && field.getType() != SessionFactory.class
+                                && !registry.hasService(clazzRef)) {
                             tracker.track(field.getType());
                         }
                     }
@@ -272,11 +278,19 @@ public class CommandExtension implements Extension, Satisfiable {
         }
 
         @Override
-        protected <T> T getDependency(Class<T> clazz) {
-            if (clazz == BundleContext.class) {
-                return clazz.cast(CommandExtension.this.bundle.getBundleContext());
+        protected Object getDependency(ReifiedType type) {
+            if (type.getRawClass() == BundleContext.class) {
+                return CommandExtension.this.bundle.getBundleContext();
             }  else {
-                return CommandExtension.this.tracker.getService(clazz);
+                Object value = CommandExtension.this.tracker.getService(type.getRawClass());
+                if (value == null) {
+                    if (type.getRawClass() == List.class) {
+                        value = registry.getServices(type.getActualTypeArgument(0).getRawClass());
+                    } else {
+                        value = registry.getService(type.getRawClass());
+                    }
+                }
+                return value;
             }
         }
 
@@ -297,17 +311,17 @@ public class CommandExtension implements Extension, Satisfiable {
         }
 
         @Override
-        public int complete(Session session, String buffer, int cursor, List<String> candidates) {
+        public int complete(Session session, CommandLine commandLine, List<String> candidates) {
             Object service = session.getRegistry().getService(clazz);
             if (service instanceof Completer) {
-                return ((Completer) service).complete(session, buffer, cursor, candidates);
+                return ((Completer) service).complete(session, commandLine, candidates);
             }
             ServiceReference<?> ref = context.getServiceReference(clazz);
             if (ref != null) {
                 Object completer = context.getService(ref);
                 if (completer instanceof Completer) {
                     try {
-                        return ((Completer) completer).complete(session, buffer, cursor, candidates);
+                        return ((Completer) completer).complete(session, commandLine, candidates);
                     } finally {
                         context.ungetService(ref);
                     }

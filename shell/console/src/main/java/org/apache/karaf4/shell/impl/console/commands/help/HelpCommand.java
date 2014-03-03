@@ -1,6 +1,8 @@
 package org.apache.karaf4.shell.impl.console.commands.help;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +10,7 @@ import java.util.Set;
 
 import org.apache.karaf.util.properties.InterpolationHelper;
 import org.apache.karaf4.shell.api.console.Command;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Registry;
 import org.apache.karaf4.shell.api.console.Session;
@@ -26,13 +29,13 @@ public class HelpCommand implements Command {
         Registry registry = factory.getRegistry();
         registry.register(this);
         registry.register(new SimpleHelpProvider());
-        registry.register(new SingleCommandHelpProvider());
         registry.register(new CommandListHelpProvider());
+        registry.register(new SingleCommandHelpProvider());
     }
 
     @Override
     public String getScope() {
-        return "*";
+        return Session.SCOPE_GLOBAL;
     }
 
     @Override
@@ -70,19 +73,40 @@ public class HelpCommand implements Command {
     public Completer getCompleter(final boolean scoped) {
         return new Completer() {
             @Override
-            public int complete(Session session, String buffer, int cursor, List<String> candidates) {
-                // TODO: use CommandNamesCompleter and better completion wrt parsing etc...
-                // TODO: also this completion method always display 'help ' before the posible completions
-                StringsCompleter completer = new StringsCompleter();
-                Set<String> completions = completer.getStrings();
-                for (Command command : session.getRegistry().getCommands()) {
-                    if (!"*".equals(command.getScope())) {
-                        completions.add(getName() + " " + command.getScope() + ":" + command.getName());
-                    }
-                    completions.add(getName() + " " + command.getName());
+            public int complete(Session session, CommandLine commandLine, List<String> candidates) {
+                String[] args = commandLine.getArguments();
+                int argIndex = commandLine.getCursorArgumentIndex();
+                StringsCompleter completer = new StringsCompleter(Collections.singletonList(getName()));
+                if (argIndex == 0) {
+                    return completer.complete(session, new ArgumentCommandLine(args[argIndex], commandLine.getArgumentPosition()), candidates);
+                } else if (!verifyCompleter(session, completer, args[0])) {
+                    return -1;
                 }
-                completions.add(getName() + " --help");
-                return completer.complete(session, buffer, cursor, candidates);
+                // TODO: use CommandNamesCompleter and better completion wrt parsing etc...
+                completer = new StringsCompleter();
+                for (Command command : session.getRegistry().getCommands()) {
+                    if (!Session.SCOPE_GLOBAL.equals(command.getScope())) {
+                        completer.getStrings().add(command.getScope() + ":" + command.getName());
+                    }
+                    completer.getStrings().add(command.getName());
+                }
+                completer.getStrings().add("--help");
+                if (argIndex == 1) {
+                    int res;
+                    if (argIndex < args.length) {
+                        res = completer.complete(session, new ArgumentCommandLine(args[argIndex], commandLine.getArgumentPosition()), candidates);
+                    } else {
+                        res = completer.complete(session, new ArgumentCommandLine("", 0), candidates);
+                    }
+                    return res + (commandLine.getBufferPosition() - commandLine.getArgumentPosition());
+                } else if (!verifyCompleter(session, completer, args[1])) {
+                    return -1;
+                }
+                return -1;
+            }
+            protected boolean verifyCompleter(Session session, Completer completer, String argument) {
+                List<String> candidates = new ArrayList<String>();
+                return completer.complete(session, new ArgumentCommandLine(argument, argument.length()), candidates) != -1 && !candidates.isEmpty();
             }
         };
     }
@@ -139,6 +163,46 @@ public class HelpCommand implements Command {
             help = help.substring(0, help.length()  -1);
         }
         return help;
+    }
+
+    static class ArgumentCommandLine implements CommandLine {
+        private final String argument;
+        private final int position;
+
+        ArgumentCommandLine(String argument, int position) {
+            this.argument = argument;
+            this.position = position;
+        }
+
+        @Override
+        public int getCursorArgumentIndex() {
+            return 0;
+        }
+
+        @Override
+        public String getCursorArgument() {
+            return argument;
+        }
+
+        @Override
+        public int getArgumentPosition() {
+            return position;
+        }
+
+        @Override
+        public String[] getArguments() {
+            return new String[] { argument };
+        }
+
+        @Override
+        public int getBufferPosition() {
+            return position;
+        }
+
+        @Override
+        public String getBuffer() {
+            return argument;
+        }
     }
 
 }

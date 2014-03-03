@@ -6,10 +6,11 @@ import org.apache.felix.service.command.CommandProcessor;
 import org.apache.felix.service.command.CommandSession;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.CommandWithAction;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Registry;
 import org.apache.karaf4.shell.api.console.Session;
-import org.apache.karaf4.shell.impl.console.ConsoleSessionImpl;
+import org.apache.karaf4.shell.impl.console.HeadlessSessionImpl;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
@@ -17,14 +18,11 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
-/**
- * Created by gnodet on 27/02/14.
- */
-public class CommandTracker implements BundleActivator, ServiceTrackerCustomizer {
+public class CommandTracker implements BundleActivator, ServiceTrackerCustomizer<Object, Object> {
 
     Registry registry;
     BundleContext context;
-    ServiceTracker tracker;
+    ServiceTracker<?, ?> tracker;
 
     public CommandTracker(Registry registry) {
         this.registry = registry;
@@ -35,7 +33,7 @@ public class CommandTracker implements BundleActivator, ServiceTrackerCustomizer
         this.context = context;
         Filter filter = context.createFilter(String.format("(&(%s=*)(%s=*))",
                 CommandProcessor.COMMAND_SCOPE, CommandProcessor.COMMAND_FUNCTION));
-        this.tracker = new ServiceTracker(context, filter, this);
+        this.tracker = new ServiceTracker<Object, Object>(context, filter, this);
         this.tracker.open();
     }
 
@@ -72,15 +70,16 @@ public class CommandTracker implements BundleActivator, ServiceTrackerCustomizer
                         final ArgumentCompleter completer = new ArgumentCompleter(oldCommand, scoped);
                         return new Completer() {
                             @Override
-                            public int complete(Session session, String buffer, int cursor, List<String> candidates) {
-                                return completer.complete(buffer, cursor, candidates);
+                            public int complete(Session session, CommandLine commandLine, List<String> candidates) {
+                                return completer.complete(session, commandLine, candidates);
                             }
                         };
                     }
 
                     @Override
                     public Object execute(Session session, List<Object> arguments) throws Exception {
-                        CommandSession commandSession = ((ConsoleSessionImpl) session).getSession();
+                        // TODO: remove not really nice cast
+                        CommandSession commandSession = ((HeadlessSessionImpl) session).getSession();
                         return oldCommand.execute(commandSession, arguments);
                     }
                 };
@@ -98,7 +97,7 @@ public class CommandTracker implements BundleActivator, ServiceTrackerCustomizer
     @Override
     public void removedService(ServiceReference reference, Object service) {
         if (service instanceof org.apache.karaf4.shell.api.console.Command) {
-            registry.unregister((org.apache.karaf4.shell.api.console.Command) service);
+            registry.unregister(service);
         }
         context.ungetService(reference);
     }

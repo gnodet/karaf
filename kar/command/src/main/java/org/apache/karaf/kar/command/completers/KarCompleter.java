@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.karaf.kar.KarService;
 import org.apache.karaf4.shell.api.action.lifecycle.Reference;
 import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.support.completers.StringsCompleter;
@@ -34,7 +35,7 @@ public class KarCompleter implements Completer {
     @Reference
     private KarService karService;
     
-    public int complete(Session session, String buffer, int cursor, List<String> candidates) {
+    public int complete(Session session, CommandLine commandLine, List<String> candidates) {
         StringsCompleter delegate = new StringsCompleter();
         try {
             for (String karName : karService.list()) {
@@ -43,7 +44,7 @@ public class KarCompleter implements Completer {
         } catch (Exception e) {
             // ignore
         }
-        return delegate.complete(session, buffer, cursor, candidates);
+        return delegate.complete(session, commandLine, candidates);
     }
     
 }

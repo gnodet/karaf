@@ -65,7 +65,7 @@ public class WatchAction implements Action {
             System.err.println("Argument expected");
         } else {
             StringBuilder command = new StringBuilder();
-            for (String arg:arguments) {
+            for (String arg : arguments) {
                 command.append(arg).append(" ");
             }
             WatchTask watchTask = new WatchTask(command.toString().trim());
@@ -99,7 +99,8 @@ public class WatchAction implements Action {
                 byteArrayOutputStream = new ByteArrayOutputStream();
                 printStream = new PrintStream(byteArrayOutputStream);
                 session = sessionFactory.createSession(null, printStream, printStream);
-                session.put("SCOPE", "shell:bundle:*");
+                session.put(Session.SCOPE, WatchAction.this.session.get(Session.SCOPE));
+                session.put(Session.SUBSHELL, WatchAction.this.session.get(Session.SUBSHELL));
                 String output = "";
                 try {
                     session.execute(command);

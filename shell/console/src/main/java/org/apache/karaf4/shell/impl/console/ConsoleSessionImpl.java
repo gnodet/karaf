@@ -245,6 +245,11 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
         }
     }
 
+    @Override
+    public String readLine(String prompt, Character mask) throws IOException {
+        return reader.readLine(prompt, mask);
+    }
+
     private void setCompletionMode() {
         try {
             File shellCfg = new File(System.getProperty("karaf.etc"), "/org.apache.karaf.shell.cfg");

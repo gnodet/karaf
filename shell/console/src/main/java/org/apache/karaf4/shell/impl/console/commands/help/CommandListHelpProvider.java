@@ -44,8 +44,14 @@ public class CommandListHelpProvider implements HelpProvider {
         }
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         SortedMap<String, String> commands = getCommandDescriptions(session, path);
-        printMethodList(session, new PrintStream(baos), commands);
-        return baos.toString();
+        if (commands.isEmpty()) {
+            return null;
+        } else if (commands.size() == 1 && commands.containsKey(path)) {
+            return null;
+        } else {
+            printMethodList(session, new PrintStream(baos), commands);
+            return baos.toString();
+        }
     }
 
     private SortedMap<String, String> getCommandDescriptions(Session session, String path) {
@@ -68,7 +74,7 @@ public class CommandListHelpProvider implements HelpProvider {
             if (completionMode != null && completionMode.equalsIgnoreCase(Session.COMPLETION_MODE_SUBSHELL)) {
                 // filter the help only for "global" commands
                 if (subshell == null || subshell.trim().isEmpty()) {
-                    if (!name.startsWith("*")) {
+                    if (!name.startsWith(Session.SCOPE_GLOBAL)) {
                         continue;
                     }
                 }

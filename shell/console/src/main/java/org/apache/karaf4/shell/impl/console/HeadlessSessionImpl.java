@@ -3,8 +3,10 @@ package org.apache.karaf4.shell.impl.console;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.List;
 
 import org.apache.felix.service.command.CommandSession;
+import org.apache.karaf4.shell.api.console.Command;
 import org.apache.karaf4.shell.api.console.History;
 import org.apache.karaf4.shell.api.console.Registry;
 import org.apache.karaf4.shell.api.console.Session;
@@ -76,8 +78,6 @@ public class HeadlessSessionImpl implements Session {
                     break;
 
                 case '\r':
-                    break;
-
                 case '\n':
                     if (sb.length() > 0)
                     {
@@ -126,6 +126,23 @@ public class HeadlessSessionImpl implements Session {
     @Override
     public void run() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String resolveCommand(String name) {
+        // TODO: optimize
+        if (!name.contains(":")) {
+            String[] scopes = ((String) get(Session.SCOPE)).split(":");
+            List<Command> commands = registry.getCommands();
+            for (String scope : scopes) {
+                for (Command command : commands) {
+                    if ((Session.SCOPE_GLOBAL.equals(scope) || command.getScope().equals(scope)) && command.getName().equals(name)) {
+                        return command.getScope() + ":" + name;
+                    }
+                }
+            }
+        }
+        return name;
     }
 
     @Override

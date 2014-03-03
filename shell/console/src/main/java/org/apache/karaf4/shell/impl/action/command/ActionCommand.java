@@ -10,12 +10,15 @@ import org.apache.karaf4.shell.api.action.Command;
 import org.apache.karaf4.shell.api.action.lifecycle.Destroy;
 import org.apache.karaf4.shell.api.action.lifecycle.Init;
 import org.apache.karaf4.shell.api.action.lifecycle.Reference;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.History;
 import org.apache.karaf4.shell.api.console.Registry;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.api.console.SessionFactory;
 import org.apache.karaf4.shell.api.console.Terminal;
+import org.apache.karaf4.shell.impl.action.converter.GenericType;
+import org.apache.karaf4.shell.impl.action.converter.ReifiedType;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
@@ -55,7 +58,7 @@ public class ActionCommand implements org.apache.karaf4.shell.api.console.Comman
         return new DelayedCompleter(clazz);
     }
 
-    protected <T> T getDependency(Class<T> clazz) {
+    protected Object getDependency(ReifiedType type) {
         throw new UnsupportedOperationException("Completers are not supported");
     }
 
@@ -90,11 +93,8 @@ public class ActionCommand implements org.apache.karaf4.shell.api.console.Comman
                             value = session.getRegistry();
                         } else if (field.getType() == SessionFactory.class) {
                             value = session.getFactory();
-                        } else if (field.getType() == List.class) {
-                            // TODO
-                            value = new ArrayList();
                         } else {
-                            value = getDependency(field.getType());
+                            value = getDependency(new GenericType(field.getGenericType()));
                         }
                         if (value == null) {
                             throw new RuntimeException("No OSGi service matching " + field.getType().getName());
@@ -135,10 +135,10 @@ public class ActionCommand implements org.apache.karaf4.shell.api.console.Comman
         }
 
         @Override
-        public int complete(Session session, String buffer, int cursor, List<String> candidates) {
+        public int complete(Session session, CommandLine commandLine, List<String> candidates) {
             Object service = session.getRegistry().getServices(clazz);
             if (service instanceof Completer) {
-                return ((Completer) service).complete(session, buffer, cursor, candidates);
+                return ((Completer) service).complete(session, commandLine, candidates);
             }
             return -1;
         }

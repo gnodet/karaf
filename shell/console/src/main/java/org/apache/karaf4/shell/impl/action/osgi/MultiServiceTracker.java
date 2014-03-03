@@ -27,12 +27,12 @@ import org.osgi.framework.BundleContext;
 /**
  * Track multiple services by their type
  */
-public class MultiServiceTracker {
+public class MultiServiceTracker implements Satisfiable {
 
     private final BundleContext bundleContext;
     private final Satisfiable satisfiable;
     private final ConcurrentMap<Class, SingleServiceTracker> trackers = new ConcurrentHashMap<Class, SingleServiceTracker>();
-    private final AtomicInteger count = new AtomicInteger();
+    private final AtomicInteger count = new AtomicInteger(-1);
 
     public MultiServiceTracker(BundleContext bundleContext, Satisfiable satisfiable) {
         this.bundleContext = bundleContext;
@@ -42,29 +42,7 @@ public class MultiServiceTracker {
     @SuppressWarnings("unchecked")
     public void track(Class service) {
         if (trackers.get(service) == null) {
-            SingleServiceTracker tracker = new SingleServiceTracker(bundleContext, service, new Satisfiable() {
-                @Override
-                public void found() {
-                    if (count.incrementAndGet() == trackers.size()) {
-                        satisfiable.found();
-                    }
-                }
-
-                @Override
-                public void updated() {
-                    if (count.get() == trackers.size()) {
-                        satisfiable.updated();
-                    }
-                }
-
-                @Override
-                public void lost() {
-                    if (count.getAndDecrement() == trackers.size()) {
-                        satisfiable.lost();
-                    }
-                }
-
-            });
+            SingleServiceTracker tracker = new SingleServiceTracker(bundleContext, service, this);
             trackers.putIfAbsent(service, tracker);
         }
     }
@@ -78,11 +56,34 @@ public class MultiServiceTracker {
         for (SingleServiceTracker tracker : trackers.values()) {
             tracker.open();
         }
+        found();
     }
 
     public void close() {
+        lost();
         for (SingleServiceTracker tracker : trackers.values()) {
             tracker.close();
+        }
+    }
+
+    @Override
+    public void found() {
+        if (count.incrementAndGet() == trackers.size()) {
+            satisfiable.found();
+        }
+    }
+
+    @Override
+    public void updated() {
+        if (count.get() == trackers.size()) {
+            satisfiable.updated();
+        }
+    }
+
+    @Override
+    public void lost() {
+        if (count.getAndDecrement() == trackers.size()) {
+            satisfiable.lost();
         }
     }
 

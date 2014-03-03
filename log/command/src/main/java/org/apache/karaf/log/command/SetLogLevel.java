@@ -29,8 +29,8 @@ import org.apache.karaf.shell.inject.Service;
 @Service
 public class SetLogLevel extends LogCommandSupport {
     
-    @Argument(index = 0, name = "level", description = "The log level to set (TRACE, DEBUG, INFO, WARN, ERROR) or DEFAULT to unset", required = true, multiValued = false)
-    @Completer(value = StringsCompleter.class, values = { "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "DEFAULT" })
+    @Argument(index = 0, name = "level", description = "The log level to set (trace, debug, info, warn, error) or default to unset", required = true, multiValued = false)
+    @Completer(value = StringsCompleter.class, values = { "trace", "debug", "info", "warn", "error", "default" })
     String level;
 
     @Argument(index = 1, name = "logger", description = "Logger name or ROOT (default)", required = false, multiValued = false)

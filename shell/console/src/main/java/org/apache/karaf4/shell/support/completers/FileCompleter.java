@@ -20,6 +20,7 @@ package org.apache.karaf4.shell.support.completers;
 import java.io.File;
 import java.util.List;
 
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 
@@ -57,12 +58,13 @@ public class FileCompleter implements Completer
 
     }
 
-    public int complete(final Session session, String buffer, final int cursor, final List<String> candidates) {
+    public int complete(final Session session, CommandLine commandLine, final List<String> candidates) {
         // buffer can be null
         if (candidates == null) {
             return 0;
         }
 
+        String buffer = commandLine.getBuffer();
         if (buffer == null) {
             buffer = "";
         }

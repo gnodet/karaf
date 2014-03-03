@@ -20,10 +20,12 @@ package org.apache.karaf4.shell.support.completers;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 
@@ -34,15 +36,20 @@ import org.apache.karaf4.shell.api.console.Session;
 public class StringsCompleter
     implements Completer
 {
-    private final SortedSet<String> strings = new TreeSet<String>();
+    private final SortedSet<String> strings;
     private final boolean caseSensitive;
 
     public StringsCompleter() {
         this(true);
     }
 
-
     public StringsCompleter(final boolean caseSensitive) {
+        this.strings = new TreeSet<String>(new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return caseSensitive ? o1.compareTo(o2) : o1.compareToIgnoreCase(o2);
+            }
+        });
         this.caseSensitive = caseSensitive;
     }
 
@@ -71,10 +78,11 @@ public class StringsCompleter
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public int complete(final Session session, String buffer, final int cursor, final List candidates) {
+    public int complete(final Session session, final CommandLine commandLine, final List<String> candidates) {
         // buffer could be null
         assert candidates != null;
 
+        String buffer = commandLine.getBuffer();
         if (buffer == null) {
             buffer = "";
         }

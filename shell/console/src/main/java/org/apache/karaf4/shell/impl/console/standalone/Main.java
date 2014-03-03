@@ -43,6 +43,7 @@ import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.api.console.SessionFactory;
 import org.apache.karaf4.shell.api.console.Terminal;
 import org.apache.karaf4.shell.impl.action.command.ActionCommand;
+import org.apache.karaf4.shell.impl.action.converter.ReifiedType;
 import org.apache.karaf4.shell.support.NameScoping;
 import org.apache.karaf4.shell.impl.console.JLineTerminal;
 import org.apache.karaf4.shell.impl.console.SessionFactoryImpl;
@@ -220,7 +221,7 @@ public class Main {
                                     return null;
                                 }
                                 @Override
-                                protected <T> T getDependency(Class<T> clazz) {
+                                protected Object getDependency(ReifiedType type) {
                                     // TODO
                                     return null;
                                 }

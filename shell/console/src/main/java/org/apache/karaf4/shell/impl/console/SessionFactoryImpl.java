@@ -55,7 +55,7 @@ public class SessionFactoryImpl extends RegistryImpl implements SessionFactory, 
             Command command = (Command) service;
             String scope = command.getScope();
             String name = command.getName();
-            if (!"*".equals(scope)) {
+            if (!Session.SCOPE_GLOBAL.equals(scope)) {
                 if (!subshells.containsKey(scope)) {
                     SubShellCommand subShell = new SubShellCommand(scope);
                     subshells.put(scope, subShell);
@@ -76,7 +76,7 @@ public class SessionFactoryImpl extends RegistryImpl implements SessionFactory, 
             String scope = command.getScope();
             String name = command.getName();
             commandProcessor.removeCommand(scope, name);
-            if (!"*".equals(scope)) {
+            if (!Session.SCOPE_GLOBAL.equals(scope)) {
                 if (subshells.get(scope).decrement() == 0) {
                     SubShellCommand subShell = subshells.remove(scope);
                     unregister(subShell);

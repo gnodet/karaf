@@ -42,6 +42,8 @@ public interface Session extends Runnable {
     String COMPLETION_MODE_SUBSHELL = "subshell";
     String COMPLETION_MODE_FIRST = "first";
 
+    String SCOPE_GLOBAL = "*";
+
     /**
      * Execute a program in this session.
      *
@@ -104,6 +106,8 @@ public interface Session extends Runnable {
     Registry getRegistry();
 
     SessionFactory getFactory();
+
+    String resolveCommand(String name);
 
     /**
      * Close this session. After the session is closed, it will throw

@@ -31,6 +31,7 @@ import java.util.Set;
 import org.apache.karaf4.shell.api.action.Argument;
 import org.apache.karaf4.shell.api.action.Completion;
 import org.apache.karaf4.shell.api.action.Option;
+import org.apache.karaf4.shell.api.console.CommandLine;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Session;
 import org.apache.karaf4.shell.support.completers.FileCompleter;
@@ -42,10 +43,6 @@ import org.slf4j.LoggerFactory;
 public class ArgumentCompleter implements Completer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArgumentCompleter.class);
-
-    public static final String ARGUMENTS_LIST = "ARGUMENTS_LIST";
-
-    public static final String COMMANDS = ".commands";
 
     final ActionCommand command;
     final Completer commandCompleter;
@@ -63,8 +60,7 @@ public class ArgumentCompleter implements Completer {
         Class<?> actionClass = command.getActionClass();
         // Command name completer
         org.apache.karaf4.shell.api.action.Command cmd = actionClass.getAnnotation(org.apache.karaf4.shell.api.action.Command.class);
-        // TODO: handle scope = * ?
-        String[] names = scoped ? new String[] { cmd.name() } : new String[] { cmd.name(), cmd.scope() + ":" + cmd.name() };
+        String[] names = scoped || Session.SCOPE_GLOBAL.equals(cmd.scope()) ? new String[] { cmd.name() } : new String[] { cmd.name(), cmd.scope() + ":" + cmd.name() };
         commandCompleter = new StringsCompleter(names);
         // Build options completer
         for (Class<?> type = actionClass; type != null; type = type.getSuperclass()) {
@@ -191,38 +187,23 @@ public class ArgumentCompleter implements Completer {
         return this.strict;
     }
 
-    public int complete(Session session, final String buffer, final int cursor, final List<String> candidates) {
-        ArgumentList list = delimit(buffer, cursor);
+    public int complete(Session session, final CommandLine list, final List<String> candidates) {
         int argpos = list.getArgumentPosition();
         int argIndex = list.getCursorArgumentIndex();
-
-        //Store the argument list so that it can be used by completers.
-        //TODO make arguments accessible
-//        CommandSession commandSession = CommandSessionHolder.getSession();
-//        if(commandSession != null) {
-//            commandSession.put(ARGUMENTS_LIST,list);
-//        }
 
         Completer comp = null;
         String[] args = list.getArguments();
         int index = 0;
         // First argument is command name
         if (index < argIndex) {
+            // Verify scope
+            if (!Session.SCOPE_GLOBAL.equals(command.getScope()) && !session.resolveCommand(args[index]).equals(command.getScope() + ":" + command.getName())) {
+                return -1;
+            }
             // Verify command name
             if (!verifyCompleter(session, commandCompleter, args[index])) {
                 return -1;
             }
-            // Verify scope if
-            // - the command name has no scope
-            // - we have a session
-            // TODO: very scope
-//            if (!args[index].contains(":") && commandSession != null) {
-//                Function f1 = unProxy((Function) commandSession.get("*:" + args[index]));
-//                Function f2 = unProxy(this.function);
-//                if (f1 != null && f1 != f2) {
-//                    return -1;
-//                }
-//            }
             index++;
         } else {
             comp = commandCompleter;
@@ -293,7 +274,7 @@ public class ArgumentCompleter implements Completer {
             comp = argsCompleters.get(indexArg >= argsCompleters.size() ? argsCompleters.size() - 1 : indexArg);
         }
 
-        int ret = comp.complete(session, list.getCursorArgument(), argpos, candidates);
+        int ret = comp.complete(session, new ArgumentCommandLine(list.getCursorArgument(), argpos), candidates);
 
         if (ret == -1) {
             return -1;
@@ -312,6 +293,8 @@ public class ArgumentCompleter implements Completer {
          *  and hit TAB, we want "foo bar" instead of "foo  bar".
          */
 
+        String buffer = list.getBuffer();
+        int cursor = list.getBufferPosition();
         if ((buffer != null) && (cursor != buffer.length()) && isDelimiter(buffer, cursor)) {
             for (int i = 0; i < candidates.size(); i++) {
                 String val = candidates.get(i);
@@ -330,18 +313,7 @@ public class ArgumentCompleter implements Completer {
 
     protected boolean verifyCompleter(Session session, Completer completer, String argument) {
         List<String> candidates = new ArrayList<String>();
-        return completer.complete(session, argument, argument.length(), candidates) != -1 && !candidates.isEmpty();
-    }
-
-    public ArgumentList delimit(final String buffer, final int cursor) {
-        Parser parser = new Parser(buffer, cursor);
-        try {
-            List<List<List<String>>> program = parser.program();
-            List<String> pipe = program.get(parser.c0).get(parser.c1);
-            return new ArgumentList(pipe.toArray(new String[pipe.size()]), parser.c2, parser.c3, cursor);
-        } catch (Throwable t) {
-            return new ArgumentList(new String[] { buffer }, 0, cursor, cursor);
-        }
+        return completer.complete(session, new ArgumentCommandLine(argument, argument.length()), candidates) != -1 && !candidates.isEmpty();
     }
 
     /**
@@ -370,70 +342,43 @@ public class ArgumentCompleter implements Completer {
         return Character.isWhitespace(buffer.charAt(pos));
     }
 
-    /**
-     *  The result of a delimited buffer.
-     */
-    public static class ArgumentList {
-        private String[] arguments;
-        private int cursorArgumentIndex;
-        private int argumentPosition;
-        private int bufferPosition;
+    static class ArgumentCommandLine implements CommandLine {
+        private final String argument;
+        private final int position;
 
-        /**
-         *  @param  arguments           the array of tokens
-         *  @param  cursorArgumentIndex the token index of the cursor
-         *  @param  argumentPosition    the position of the cursor in the
-         *                              current token
-         *  @param  bufferPosition      the position of the cursor in
-         *                              the whole buffer
-         */
-        public ArgumentList(String[] arguments, int cursorArgumentIndex, int argumentPosition, int bufferPosition) {
-            this.arguments = arguments;
-            this.cursorArgumentIndex = cursorArgumentIndex;
-            this.argumentPosition = argumentPosition;
-            this.bufferPosition = bufferPosition;
+        ArgumentCommandLine(String argument, int position) {
+            this.argument = argument;
+            this.position = position;
         }
 
-        public void setCursorArgumentIndex(int cursorArgumentIndex) {
-            this.cursorArgumentIndex = cursorArgumentIndex;
-        }
-
+        @Override
         public int getCursorArgumentIndex() {
-            return this.cursorArgumentIndex;
+            return 0;
         }
 
+        @Override
         public String getCursorArgument() {
-            if ((cursorArgumentIndex < 0)
-                || (cursorArgumentIndex >= arguments.length)) {
-                return null;
-            }
-
-            return arguments[cursorArgumentIndex];
+            return argument;
         }
 
-        public void setArgumentPosition(int argumentPosition) {
-            this.argumentPosition = argumentPosition;
-        }
-
+        @Override
         public int getArgumentPosition() {
-            return this.argumentPosition;
+            return position;
         }
 
-        public void setArguments(String[] arguments) {
-            this.arguments = arguments;
-        }
-
+        @Override
         public String[] getArguments() {
-            return this.arguments;
+            return new String[] { argument };
         }
 
-        public void setBufferPosition(int bufferPosition) {
-            this.bufferPosition = bufferPosition;
-        }
-
+        @Override
         public int getBufferPosition() {
-            return this.bufferPosition;
+            return position;
+        }
+
+        @Override
+        public String getBuffer() {
+            return argument;
         }
     }
-
 }

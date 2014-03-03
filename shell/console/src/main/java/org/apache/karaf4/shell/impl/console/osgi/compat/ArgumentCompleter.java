@@ -34,7 +34,6 @@ import java.util.Set;
 
 import org.apache.felix.gogo.commands.Action;
 import org.apache.felix.service.command.CommandSession;
-import org.apache.felix.service.command.Function;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.CommandWithAction;
@@ -47,15 +46,15 @@ import org.apache.karaf.shell.console.Completer;
 import org.apache.karaf.shell.console.completer.FileCompleter;
 import org.apache.karaf.shell.console.completer.NullCompleter;
 import org.apache.karaf.shell.console.completer.StringsCompleter;
+import org.apache.karaf4.shell.api.console.CommandLine;
+import org.apache.karaf4.shell.api.console.Session;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.karaf.shell.console.completer.CommandsCompleter.unProxy;
-
-public class ArgumentCompleter implements Completer {
+public class ArgumentCompleter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArgumentCompleter.class);
 
@@ -288,9 +287,7 @@ public class ArgumentCompleter implements Completer {
         return this.strict;
     }
 
-    public int complete(final String buffer, final int cursor,
-                        final List<String> candidates) {
-        ArgumentList list = delimit(buffer, cursor);
+    public int complete(final Session session, final CommandLine list, final List<String> candidates) {
         int argpos = list.getArgumentPosition();
         int argIndex = list.getCursorArgumentIndex();
 
@@ -305,19 +302,14 @@ public class ArgumentCompleter implements Completer {
         int index = 0;
         // First argument is command name
         if (index < argIndex) {
+            // Verify scope
+            Command command = function.getActionClass().getAnnotation(Command.class);
+            if (!Session.SCOPE_GLOBAL.equals(command.scope()) && !session.resolveCommand(args[index]).equals(command.scope() + ":" + command.name())) {
+                return -1;
+            }
             // Verify command name
             if (!verifyCompleter(commandCompleter, args[index])) {
                 return -1;
-            }
-            // Verify scope if
-            // - the command name has no scope
-            // - we have a session
-            if (!args[index].contains(":") && commandSession != null) {
-                Function f1 = unProxy((Function) commandSession.get("*:" + args[index]));
-                Function f2 = unProxy(this.function);
-                if (f1 != null && f1 != f2) {
-                    return -1;
-                }
             }
             index++;
         } else {
@@ -408,7 +400,8 @@ public class ArgumentCompleter implements Completer {
          *  enter "f bar" into the buffer, and move to after the "f"
          *  and hit TAB, we want "foo bar" instead of "foo  bar".
          */
-
+        String buffer = list.getBuffer();
+        int cursor = list.getBufferPosition();
         if ((buffer != null) && (cursor != buffer.length()) && isDelimiter(buffer, cursor)) {
             for (int i = 0; i < candidates.size(); i++) {
                 String val = candidates.get(i);
@@ -428,17 +421,6 @@ public class ArgumentCompleter implements Completer {
     protected boolean verifyCompleter(Completer completer, String argument) {
         List<String> candidates = new ArrayList<String>();
         return completer.complete(argument, argument.length(), candidates) != -1 && !candidates.isEmpty();
-    }
-
-    public ArgumentList delimit(final String buffer, final int cursor) {
-        Parser parser = new Parser(buffer, cursor);
-        try {
-            List<List<List<String>>> program = parser.program();
-            List<String> pipe = program.get(parser.c0).get(parser.c1);
-            return new ArgumentList(pipe.toArray(new String[pipe.size()]), parser.c2, parser.c3, cursor);
-        } catch (Throwable t) {
-            return new ArgumentList(new String[] { buffer }, 0, cursor, cursor);
-        }
     }
 
     /**
@@ -465,73 +447,6 @@ public class ArgumentCompleter implements Completer {
      */
     public boolean isDelimiterChar(String buffer, int pos) {
         return Character.isWhitespace(buffer.charAt(pos));
-    }
-
-    /**
-     *  The result of a delimited buffer.
-     */
-    public static class ArgumentList {
-        private String[] arguments;
-        private int cursorArgumentIndex;
-        private int argumentPosition;
-        private int bufferPosition;
-
-        /**
-         *  @param  arguments           the array of tokens
-         *  @param  cursorArgumentIndex the token index of the cursor
-         *  @param  argumentPosition    the position of the cursor in the
-         *                              current token
-         *  @param  bufferPosition      the position of the cursor in
-         *                              the whole buffer
-         */
-        public ArgumentList(String[] arguments, int cursorArgumentIndex,
-                            int argumentPosition, int bufferPosition) {
-            this.arguments = arguments;
-            this.cursorArgumentIndex = cursorArgumentIndex;
-            this.argumentPosition = argumentPosition;
-            this.bufferPosition = bufferPosition;
-        }
-
-        public void setCursorArgumentIndex(int cursorArgumentIndex) {
-            this.cursorArgumentIndex = cursorArgumentIndex;
-        }
-
-        public int getCursorArgumentIndex() {
-            return this.cursorArgumentIndex;
-        }
-
-        public String getCursorArgument() {
-            if ((cursorArgumentIndex < 0)
-                    || (cursorArgumentIndex >= arguments.length)) {
-                return null;
-            }
-
-            return arguments[cursorArgumentIndex];
-        }
-
-        public void setArgumentPosition(int argumentPosition) {
-            this.argumentPosition = argumentPosition;
-        }
-
-        public int getArgumentPosition() {
-            return this.argumentPosition;
-        }
-
-        public void setArguments(String[] arguments) {
-            this.arguments = arguments;
-        }
-
-        public String[] getArguments() {
-            return this.arguments;
-        }
-
-        public void setBufferPosition(int bufferPosition) {
-            this.bufferPosition = bufferPosition;
-        }
-
-        public int getBufferPosition() {
-            return this.bufferPosition;
-        }
     }
 
     public static class ProxyServiceCompleter implements Completer {

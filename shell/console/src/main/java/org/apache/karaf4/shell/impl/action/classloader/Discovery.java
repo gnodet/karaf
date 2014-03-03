@@ -14,6 +14,7 @@ import org.apache.karaf4.shell.api.action.Command;
 import org.apache.karaf4.shell.api.console.Completer;
 import org.apache.karaf4.shell.api.console.Registry;
 import org.apache.karaf4.shell.impl.action.command.ActionCommand;
+import org.apache.karaf4.shell.impl.action.converter.ReifiedType;
 
 public class Discovery {
 
@@ -50,7 +51,7 @@ public class Discovery {
                             return null;
                         }
                         @Override
-                        protected <T> T getDependency(Class<T> clazz) {
+                        protected Object getDependency(ReifiedType type) {
                             // TODO
                             return null;
                         }

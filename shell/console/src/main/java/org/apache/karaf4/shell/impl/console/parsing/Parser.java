@@ -18,7 +18,7 @@
  */
 // DWB14: parser loops if // comment at start of program
 // DWB15: allow program to have trailing ';'
-package org.apache.karaf4.shell.impl.console.osgi.compat;
+package org.apache.karaf4.shell.impl.console.parsing;
 
 import java.util.ArrayList;
 import java.util.List;
