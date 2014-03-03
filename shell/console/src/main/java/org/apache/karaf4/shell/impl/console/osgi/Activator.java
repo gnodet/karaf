@@ -6,6 +6,7 @@ import org.apache.karaf4.shell.impl.action.osgi.CommandExtender;
 import org.apache.karaf4.shell.impl.console.SessionFactoryImpl;
 import org.apache.karaf4.shell.impl.console.TerminalFactory;
 import org.apache.karaf4.shell.impl.console.osgi.compat.CommandTracker;
+import org.apache.karaf4.shell.impl.console.osgi.secured.SecuredSessionFactoryImpl;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -31,7 +32,7 @@ public class Activator implements BundleActivator {
         threadIO = new ThreadIOImpl();
         threadIO.start();
 
-        consoleFactory = new SessionFactoryImpl(threadIO);
+        consoleFactory = new SecuredSessionFactoryImpl(context, threadIO);
         consoleFactory.getCommandProcessor().addConverter(new Converters(context));
         consoleFactory.getCommandProcessor().addConstant(".context", context.getBundle(0).getBundleContext());
         consoleFactoryRegistration = context.registerService(SessionFactory.class.getName(), consoleFactory, null);

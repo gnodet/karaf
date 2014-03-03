@@ -63,9 +63,13 @@ public class SessionFactoryImpl extends RegistryImpl implements SessionFactory, 
                 }
                 subshells.get(scope).increment();
             }
-            commandProcessor.addCommand(scope, new CommandWrapper(command), name);
+            commandProcessor.addCommand(scope, wrap(command), name);
         }
         super.register(service);
+    }
+
+    protected Function wrap(Command command) {
+        return new CommandWrapper(command);
     }
 
     @Override
@@ -89,7 +93,7 @@ public class SessionFactoryImpl extends RegistryImpl implements SessionFactory, 
     public Session create(InputStream in, PrintStream out, PrintStream err, Terminal term, String encoding, Runnable closeCallback) {
         synchronized (this) {
             if (closed) {
-                throw new IllegalStateException("ConsoleFactory has been closed");
+                throw new IllegalStateException("SessionFactory has been closed");
             }
             final Session session = new ConsoleSessionImpl(this, commandProcessor, threadIO, in, out, err, term, encoding, closeCallback);
             final Terminal terminal = session.getTerminal();

@@ -1,4 +1,4 @@
-package org.apache.karaf4.shell.impl.console;
+package org.apache.karaf4.shell.impl.console.osgi.secured;
 
 import java.util.List;
 
@@ -8,16 +8,22 @@ import org.apache.felix.service.command.Function;
 import org.apache.karaf4.shell.api.console.Command;
 import org.apache.karaf4.shell.api.console.Session;
 
-public class CommandWrapper implements Function {
+public class SecuredCommand implements Function {
 
+    private final SecuredSessionFactoryImpl factory;
     private final Command command;
 
-    public CommandWrapper(Command command) {
+    public SecuredCommand(SecuredSessionFactoryImpl factory, Command command) {
         this.command = command;
+        this.factory = factory;
     }
 
-    public Command getCommand() {
-        return command;
+    public String getScope() {
+        return command.getScope();
+    }
+
+    public String getName() {
+        return command.getName();
     }
 
     @Override
@@ -37,7 +43,9 @@ public class CommandWrapper implements Function {
                 });
             }
         }
+        factory.checkSecurity(this, session, arguments);
         return command.execute(session, arguments);
     }
+
 
 }

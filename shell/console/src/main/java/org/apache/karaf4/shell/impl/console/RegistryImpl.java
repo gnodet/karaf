@@ -50,14 +50,18 @@ public class RegistryImpl implements Registry {
             for (Object service : services.values()) {
                 if (service instanceof Factory) {
                     if (clazz.isAssignableFrom(((Factory) service).clazz)) {
-                        try {
-                            return clazz.cast(((Factory) service).callable.call());
-                        } catch (Exception e) {
-                            // TODO: log exception
+                        if (isVisible(service)) {
+                            try {
+                                return clazz.cast(((Factory) service).callable.call());
+                            } catch (Exception e) {
+                                // TODO: log exception
+                            }
                         }
                     }
                 } else if (clazz.isInstance(service)) {
-                    return clazz.cast(service);
+                    if (isVisible(service)) {
+                        return clazz.cast(service);
+                    }
                 }
             }
         }
@@ -74,14 +78,18 @@ public class RegistryImpl implements Registry {
             for (Object service : services.values()) {
                 if (service instanceof Factory) {
                     if (clazz.isAssignableFrom(((Factory) service).clazz)) {
-                        try {
-                            list.add(clazz.cast(((Factory) service).callable.call()));
-                        } catch (Exception e) {
-                            // TODO: log exception
+                        if (isVisible(service)) {
+                            try {
+                                list.add(clazz.cast(((Factory) service).callable.call()));
+                            } catch (Exception e) {
+                                // TODO: log exception
+                            }
                         }
                     }
                 } else if (clazz.isInstance(service)) {
-                    list.add(clazz.cast(service));
+                    if (isVisible(service)) {
+                        list.add(clazz.cast(service));
+                    }
                 }
             }
         }
@@ -97,10 +105,14 @@ public class RegistryImpl implements Registry {
             for (Object service : services.values()) {
                 if (service instanceof Factory) {
                     if (clazz.isAssignableFrom(((Factory) service).clazz)) {
-                        return true;
+                        if (isVisible(service)) {
+                            return true;
+                        }
                     }
                 } else if (clazz.isInstance(service)) {
-                    return true;
+                    if (isVisible(service)) {
+                        return true;
+                    }
                 }
             }
         }
@@ -108,6 +120,10 @@ public class RegistryImpl implements Registry {
             return parent.hasService(clazz);
         }
         return false;
+    }
+
+    protected boolean isVisible(Object service) {
+        return true;
     }
 
     static class Factory<T> {

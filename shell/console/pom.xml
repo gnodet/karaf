@@ -99,6 +99,11 @@
             <groupId>org.apache.sshd</groupId>
             <artifactId>sshd-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.service</groupId>
+            <artifactId>org.apache.karaf.service.guard</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
