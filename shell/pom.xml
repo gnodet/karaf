@@ -37,9 +37,7 @@
         <module>commands</module>
         <module>console</module>
         <module>ssh</module>
-        <module>help</module>
         <module>table</module>
-        <module>command-exporter</module>
     </modules>
 
 </project>
