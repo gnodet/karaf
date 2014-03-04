@@ -40,10 +40,16 @@ public class ManagerImpl implements Manager {
     private final Registry dependencies;
     private final Registry registrations;
     private final Map<Class<?>, Object> instances = new HashMap<Class<?>, Object>();
+    private final boolean allowCustomServices;
 
     public ManagerImpl(Registry dependencies, Registry registrations) {
+        this(dependencies, registrations, false);
+    }
+
+    public ManagerImpl(Registry dependencies, Registry registrations, boolean allowCustomServices) {
         this.dependencies = dependencies;
         this.registrations = registrations;
+        this.allowCustomServices = allowCustomServices;
     }
 
     public <T> T instantiate(Class<? extends T> clazz) throws Exception {
@@ -51,9 +57,11 @@ public class ManagerImpl implements Manager {
     }
 
     public <T> T instantiate(Class<? extends T> clazz, Registry registry) throws Exception {
-        Service reg = clazz.getAnnotation(Service.class);
-        if (reg == null) {
-            throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+        if (!allowCustomServices) {
+            Service reg = clazz.getAnnotation(Service.class);
+            if (reg == null) {
+                throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+            }
         }
         T instance = clazz.newInstance();
         // Inject services
@@ -73,7 +81,7 @@ public class ManagerImpl implements Manager {
                             value = this.dependencies.getService(type.getRawClass());
                         }
                     }
-                    if (value == null) {
+                    if (!allowCustomServices && value == null) {
                         throw new RuntimeException("No service matching " + field.getType().getName());
                     }
                     field.setAccessible(true);
@@ -93,9 +101,11 @@ public class ManagerImpl implements Manager {
 
     public void release(Object instance) throws Exception {
         Class<?> clazz = instance.getClass();
-        Service reg = clazz.getAnnotation(Service.class);
-        if (reg == null) {
-            throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+        if (!allowCustomServices) {
+            Service reg = clazz.getAnnotation(Service.class);
+            if (reg == null) {
+                throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+            }
         }
         for (Method method : clazz.getDeclaredMethods()) {
             Destroy ann = method.getAnnotation(Destroy.class);
@@ -108,9 +118,11 @@ public class ManagerImpl implements Manager {
 
     @Override
     public void register(Class<?> clazz) {
-        Service reg = clazz.getAnnotation(Service.class);
-        if (reg == null) {
-            throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+        if (!allowCustomServices) {
+            Service reg = clazz.getAnnotation(Service.class);
+            if (reg == null ) {
+                throw new IllegalArgumentException("Class " + clazz.getName() + " is not annotated with @Service");
+            }
         }
         if (Action.class.isAssignableFrom(clazz)) {
             final Command cmd = clazz.getAnnotation(Command.class);
@@ -120,7 +132,7 @@ public class ManagerImpl implements Manager {
             Object command = new ActionCommand(this, (Class<? extends Action>) clazz);
             registrations.register(command);
         }
-        if (Completer.class.isAssignableFrom(clazz)) {
+        if (allowCustomServices || Completer.class.isAssignableFrom(clazz)) {
             try {
                 // Create completer
                 Object completer = instantiate(clazz);

@@ -113,7 +113,7 @@ public class ConsoleSessionImpl implements Session {
         // Console reader
         try {
             reader = new ConsoleReader(null,
-                    console,
+                    in != null ? console : null,
                     out,
                     terminal instanceof JLineTerminal ? ((JLineTerminal) terminal).getTerminal() : new KarafTerminal(terminal),
                     encoding);
@@ -152,7 +152,7 @@ public class ConsoleSessionImpl implements Session {
         registry.register(new CommandNamesCompleter());
 
         // Session
-        session = processor.createSession(console, out, err);
+        session = processor.createSession(in != null ? console : null, out, err);
         Properties sysProps = System.getProperties();
         for (Object key : sysProps.keySet()) {
             session.put(key.toString(), sysProps.get(key));

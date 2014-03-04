@@ -86,8 +86,6 @@ public class ShellCommand implements Command, SessionAware {
     public void start(final Environment env) throws IOException {
         try {
             final Session session = sessionFactory.create(in, new PrintStream(out), new PrintStream(err));
-            session.put(Session.SCOPE, "shell:osgi:*");
-            session.put("APPLICATION", System.getProperty("karaf.name", "root"));
             for (Map.Entry<String,String> e : env.getEnv().entrySet()) {
                 session.put(e.getKey(), e.getValue());
             }

@@ -14,5 +14,17 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 ##---------------------------------------------------------------------------
-org.apache.karaf.wrapper.internal.WrapperServiceImpl
-org.apache.karaf.wrapper.commands.Install
+org.apache.karaf.instance.core.internal.InstanceServiceImpl
+org.apache.karaf.instance.command.ChangeOptsCommand
+org.apache.karaf.instance.command.ChangeRmiRegistryPortCommand
+org.apache.karaf.instance.command.ChangeRmiServerPortCommand
+org.apache.karaf.instance.command.ChangeSshPortCommand
+org.apache.karaf.instance.command.CloneCommand
+#org.apache.karaf.instance.command.ConnectCommand
+org.apache.karaf.instance.command.CreateCommand
+org.apache.karaf.instance.command.DestroyCommand
+org.apache.karaf.instance.command.ListCommand
+org.apache.karaf.instance.command.RenameCommand
+org.apache.karaf.instance.command.StartCommand
+org.apache.karaf.instance.command.StatusCommand
+org.apache.karaf.instance.command.StopCommand

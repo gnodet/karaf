@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.felix.service.command.CommandProcessor;
 import org.apache.felix.service.command.CommandSession;
@@ -31,6 +32,7 @@ import org.apache.karaf.shell.api.console.Registry;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.karaf.shell.api.console.Terminal;
+import org.apache.karaf.shell.support.ShellUtil;
 
 public class HeadlessSessionImpl implements Session {
 
@@ -42,13 +44,22 @@ public class HeadlessSessionImpl implements Session {
         // Factory
         this.factory = factory;
         // Registry
-        this.registry = new RegistryImpl(factory.getRegistry());
-        this.registry.register(factory);
-        this.registry.register(registry);
-        this.registry.register(this);
+        registry = new RegistryImpl(factory.getRegistry());
+        registry.register(factory);
+        registry.register(this);
+        registry.register(registry);
         // Session
-        this.session = processor.createSession(in, out, err);
-        this.session.put(".session", this);
+        session = processor.createSession(in, out, err);
+        Properties sysProps = System.getProperties();
+        for (Object key : sysProps.keySet()) {
+            session.put(key.toString(), sysProps.get(key));
+        }
+        session.put(".session", this);
+        session.put(".commandSession", session);
+        session.put(Session.SCOPE, "shell:bundle:*");
+        session.put(Session.SUBSHELL, "");
+        session.put("USER", ShellUtil.getCurrentUserName());
+        session.put("APPLICATION", System.getProperty("karaf.name", "root"));
     }
 
     public CommandSession getSession() {

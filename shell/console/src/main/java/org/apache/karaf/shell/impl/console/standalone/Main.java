@@ -132,45 +132,40 @@ public class Main {
             cl = new URLClassLoader(urls.toArray(new URL[urls.size()]), cl);
         }
 
-        SessionFactory sessionFactory = createConsoleFactory(threadio);
+        SessionFactory sessionFactory = createSessionFactory(threadio);
 
-        discoverCommands(sessionFactory.getRegistry(), cl, getDiscoveryResource());
-
-        run(sessionFactory, sb.toString(), in, out, err);
+        run(sessionFactory, sb.toString(), in, out, err, cl);
     }
 
-    private void run(final SessionFactory sessionFactory, String command, final InputStream in, final PrintStream out, final PrintStream err) throws Exception {
+    private void run(final SessionFactory sessionFactory, String command, final InputStream in, final PrintStream out, final PrintStream err, ClassLoader cl) throws Exception {
 
-        if (command.length() > 0) {
-
-            // Shell is directly executing a sub/command, we don't setup a terminal and console
-            // in this case, this avoids us reading from stdin un-necessarily.
-            Session session = sessionFactory.create(in, out, err);
+        final TerminalFactory terminalFactory = new TerminalFactory();
+        try {
+            final Terminal terminal = new JLineTerminal(terminalFactory.getTerminal());
+            Session session = createSession(sessionFactory, command.length() > 0 ? null : in, out, err, terminal);
             session.put("USER", user);
             session.put("APPLICATION", application);
-            session.put(NameScoping.MULTI_SCOPE_MODE_KEY, Boolean.toString(isMultiScopeMode()));
-            session.put(Session.PRINT_STACK_TRACES, "execution");
 
-            try {
-                session.execute(command);
-            } catch (Throwable t) {
-                ShellUtil.logException(session, t);
-            }
-        } else {
-            // We are going into full blown interactive shell mode.
+            discoverCommands(session, cl, getDiscoveryResource());
 
-            final TerminalFactory terminalFactory = new TerminalFactory();
-            try {
-                final Terminal terminal = new JLineTerminal(terminalFactory.getTerminal());
-                Session session = createSession(sessionFactory, in, out, err, terminal);
-                session.put("USER", user);
-                session.put("APPLICATION", application);
+            if (command.length() > 0) {
+                // Shell is directly executing a sub/command, we don't setup a console
+                // in this case, this avoids us reading from stdin un-necessarily.
+                session.put(NameScoping.MULTI_SCOPE_MODE_KEY, Boolean.toString(isMultiScopeMode()));
+                session.put(Session.PRINT_STACK_TRACES, "execution");
+                try {
+                    session.execute(command);
+                } catch (Throwable t) {
+                    ShellUtil.logException(session, t);
+                }
+
+            } else {
+                // We are going into full blown interactive shell mode.
                 session.run();
-            } finally {
-                terminalFactory.destroy();
             }
+        } finally {
+            terminalFactory.destroy();
         }
-
     }
 
     /**
@@ -188,7 +183,7 @@ public class Main {
         return sessionFactory.create(in, out, err, terminal, null, null);
     }
 
-    protected SessionFactory createConsoleFactory(ThreadIO threadio) {
+    protected SessionFactory createSessionFactory(ThreadIO threadio) {
         return new SessionFactoryImpl(threadio);
     }
 
@@ -200,8 +195,8 @@ public class Main {
         return "META-INF/services/org/apache/karaf/shell/commands";
     }
 
-    protected void discoverCommands(Registry registry, ClassLoader cl, String resource) throws IOException, ClassNotFoundException {
-        Manager manager = new ManagerImpl(registry, registry);
+    protected void discoverCommands(Session session, ClassLoader cl, String resource) throws IOException, ClassNotFoundException {
+        Manager manager = new ManagerImpl(session.getRegistry(), session.getFactory().getRegistry(), true);
         Enumeration<URL> urls = cl.getResources(resource);
         while (urls.hasMoreElements()) {
             URL url = urls.nextElement();
