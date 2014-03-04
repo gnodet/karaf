@@ -17,10 +17,10 @@
 package org.apache.karaf.instance.command;
 
 import org.apache.karaf.instance.command.completers.InstanceCompleter;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Completion;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 
 @Command(scope = "instance", name = "rmi-registry-port-change", description = "Changes the RMI registry port (used by management layer) of an existing container instance.")
 @Service

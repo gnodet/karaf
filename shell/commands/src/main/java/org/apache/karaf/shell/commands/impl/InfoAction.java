@@ -38,9 +38,9 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 
 import org.apache.karaf.shell.commands.InfoProvider;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.fusesource.jansi.Ansi;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;

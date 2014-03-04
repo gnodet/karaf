@@ -16,14 +16,6 @@
  */
 package org.apache.karaf.shell.commands.impl;
 
-import org.apache.karaf.shell.commands.converter.DefaultConverter;
-import org.apache.karaf.shell.commands.converter.GenericType;
-import org.apache.karaf.shell.commands.converter.ReifiedType;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -35,6 +27,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.support.converter.DefaultConverter;
+import org.apache.karaf.shell.support.converter.GenericType;
+import org.apache.karaf.shell.support.converter.ReifiedType;
 
 /**
  * Instantiate a new object

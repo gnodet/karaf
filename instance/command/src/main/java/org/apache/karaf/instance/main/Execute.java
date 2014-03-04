@@ -37,9 +37,9 @@ import org.apache.karaf.instance.command.StartCommand;
 import org.apache.karaf.instance.command.StatusCommand;
 import org.apache.karaf.instance.command.StopCommand;
 import org.apache.karaf.instance.core.internal.InstanceServiceImpl;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.impl.action.command.DefaultActionPreparator;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.impl.action.command.DefaultActionPreparator;
 import org.fusesource.jansi.AnsiConsole;
 
 public class Execute {

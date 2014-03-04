@@ -23,9 +23,9 @@ import java.util.List;
 import org.apache.karaf.features.FeaturesService;
 import org.apache.karaf.features.Repository;
 import org.apache.karaf.features.command.completers.InstalledRepoUriCompleter;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Completion;
 
 @Command(scope = "feature", name = "repo-refresh", description = "Refresh a features repository")
 public class RepoRefreshCommand extends FeaturesCommandSupport {

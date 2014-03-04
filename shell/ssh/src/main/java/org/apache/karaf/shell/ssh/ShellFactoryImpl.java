@@ -30,10 +30,10 @@ import java.util.Map;
 import javax.security.auth.Subject;
 
 import org.apache.karaf.jaas.modules.JaasHelper;
-import org.apache.karaf4.shell.api.console.Session;
-import org.apache.karaf4.shell.api.console.SessionFactory;
-import org.apache.karaf4.shell.api.console.Terminal;
-import org.apache.karaf4.shell.support.ShellUtil;
+import org.apache.karaf.shell.api.console.Session;
+import org.apache.karaf.shell.api.console.SessionFactory;
+import org.apache.karaf.shell.api.console.Terminal;
+import org.apache.karaf.shell.support.ShellUtil;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;

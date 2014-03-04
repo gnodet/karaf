@@ -18,7 +18,7 @@
  */
 package org.apache.karaf.shell.ssh;
 
-import org.apache.karaf4.shell.api.console.SessionFactory;
+import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.CommandFactory;
 

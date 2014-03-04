@@ -120,7 +120,8 @@
                              as Execute.java accesses the InstanceServiceImpl and jansi
                              (but only outside OSGi) -->
                         <Import-Package>
-                        	!org.apache.karaf.instance.core.internal,
+                        	!org.apache.karaf.shell.impl.action.command,
+                            !org.apache.karaf.instance.core.internal,
                             !org.fusesource.jansi,
                         	*
                         </Import-Package>

@@ -18,8 +18,8 @@ package org.apache.karaf.instance.command;
 
 import org.apache.karaf.instance.core.Instance;
 import org.apache.karaf.instance.core.InstanceService;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
 
 public abstract class InstanceCommandSupport implements Action {
 

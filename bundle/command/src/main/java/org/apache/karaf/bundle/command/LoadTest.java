@@ -24,12 +24,12 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.console.Session;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.console.Session;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkEvent;

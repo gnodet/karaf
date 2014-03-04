@@ -18,7 +18,7 @@
  */
 package org.apache.karaf.shell.ssh;
 
-import org.apache.karaf4.shell.api.console.Terminal;
+import org.apache.karaf.shell.api.console.Terminal;
 import org.apache.sshd.server.Environment;
 
 public class SshTerminal implements Terminal {

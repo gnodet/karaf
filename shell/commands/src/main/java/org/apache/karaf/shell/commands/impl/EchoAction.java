@@ -18,11 +18,11 @@ package org.apache.karaf.shell.commands.impl;
 
 import java.util.List;
 
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 
 @Command(scope = "shell", name = "echo", description="Echoes or prints arguments to STDOUT.")
 @Service

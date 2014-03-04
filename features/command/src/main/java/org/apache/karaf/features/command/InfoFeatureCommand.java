@@ -28,11 +28,11 @@ import org.apache.karaf.features.Dependency;
 import org.apache.karaf.features.Feature;
 import org.apache.karaf.features.FeaturesService;
 import org.apache.karaf.features.command.completers.AllFeatureCompleter;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Completion;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 
 @Command(scope = "feature", name = "info", description = "Shows information about selected feature.")
 @Service

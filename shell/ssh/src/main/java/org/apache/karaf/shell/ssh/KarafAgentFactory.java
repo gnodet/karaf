@@ -85,7 +85,7 @@ public class KarafAgentFactory implements SshAgentFactory {
         };
     }
 
-    public void registerSession(org.apache.karaf4.shell.api.console.Session session) {
+    public void registerSession(org.apache.karaf.shell.api.console.Session session) {
         try {
             String user = (String) session.get("USER");
             SshAgent agent = new AgentImpl();
@@ -102,7 +102,7 @@ public class KarafAgentFactory implements SshAgentFactory {
         }
     }
 
-    public void unregisterSession(org.apache.karaf4.shell.api.console.Session session) {
+    public void unregisterSession(org.apache.karaf.shell.api.console.Session session) {
         try {
             if (session != null && session.get(SshAgent.SSH_AUTHSOCKET_ENV_NAME) != null) {
                 String agentId = (String) session.get(SshAgent.SSH_AUTHSOCKET_ENV_NAME);

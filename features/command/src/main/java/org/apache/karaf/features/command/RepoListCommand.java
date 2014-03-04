@@ -22,10 +22,10 @@ import java.util.List;
 import org.apache.karaf.features.FeaturesService;
 import org.apache.karaf.features.Repository;
 import org.apache.karaf.shell.table.ShellTable;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
-import org.apache.karaf4.shell.support.MultiException;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.support.MultiException;
 
 @Command(scope = "feature", name = "repo-list", description = "Displays a list of all defined repositories.")
 @Service

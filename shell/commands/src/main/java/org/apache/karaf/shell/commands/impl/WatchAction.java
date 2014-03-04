@@ -25,17 +25,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
-import org.apache.karaf4.shell.api.console.Session;
-import org.apache.karaf4.shell.api.console.SessionFactory;
-import org.apache.karaf4.shell.support.ShellUtil;
-import org.apache.karaf4.shell.support.completers.CommandsCompleter;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Completion;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.console.Session;
+import org.apache.karaf.shell.api.console.SessionFactory;
+import org.apache.karaf.shell.support.ShellUtil;
+import org.apache.karaf.shell.support.completers.CommandsCompleter;
 
 @Command(scope = "shell", name = "watch", description = "Watches & refreshes the output of a command")
 @Service

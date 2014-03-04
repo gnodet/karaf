@@ -16,7 +16,7 @@
  */
 package org.apache.karaf.bundle.command;
 
-import org.apache.karaf4.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.Option;
 
 /**
  * Unique bundle command with confirmation while accessing system bundle.

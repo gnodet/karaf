@@ -18,11 +18,9 @@ package org.apache.karaf.instance.command;
 
 import org.apache.karaf.instance.core.Instance;
 import org.apache.karaf.shell.table.ShellTable;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 
 @Command(scope = "instance", name = "list", description = "Lists all existing container instances.")
 @Service

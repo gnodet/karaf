@@ -24,13 +24,13 @@ import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Option;
-import org.apache.karaf4.shell.api.console.Session;
-import org.apache.karaf4.shell.api.console.Terminal;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.console.Session;
+import org.apache.karaf.shell.api.console.Terminal;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

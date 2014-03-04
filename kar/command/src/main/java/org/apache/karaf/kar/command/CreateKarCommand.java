@@ -20,12 +20,12 @@ import java.util.List;
 
 import org.apache.karaf.features.command.completers.InstalledRepoNameCompleter;
 import org.apache.karaf.kar.KarService;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.Argument;
-import org.apache.karaf4.shell.api.action.Command;
-import org.apache.karaf4.shell.api.action.Completion;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
-import org.apache.karaf4.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Completion;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.lifecycle.Service;
 
 @Command(scope = "kar", name = "create", description = "Create a kar file for a list of feature repos")
 @Service

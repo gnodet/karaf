@@ -23,7 +23,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
-import org.apache.karaf4.shell.impl.action.command.DefaultActionPreparator;
+import org.apache.karaf.shell.impl.action.command.DefaultActionPreparator;
 
 public class GrepTest extends TestCase {
 

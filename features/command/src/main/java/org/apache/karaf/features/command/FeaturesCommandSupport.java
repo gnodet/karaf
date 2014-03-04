@@ -17,8 +17,8 @@
 package org.apache.karaf.features.command;
 
 import org.apache.karaf.features.FeaturesService;
-import org.apache.karaf4.shell.api.action.Action;
-import org.apache.karaf4.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
 
 public abstract class FeaturesCommandSupport implements Action {
 
