@@ -19,37 +19,27 @@
 package org.apache.karaf.shell.impl.action.osgi;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.utils.extender.Extension;
 import org.apache.felix.utils.manifest.Clause;
 import org.apache.felix.utils.manifest.Parser;
-import org.apache.karaf.shell.api.action.Action;
-import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Destroy;
-import org.apache.karaf.shell.api.action.lifecycle.Init;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.karaf.shell.api.console.CommandLine;
-import org.apache.karaf.shell.api.console.Completer;
 import org.apache.karaf.shell.api.console.History;
 import org.apache.karaf.shell.api.console.Registry;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.karaf.shell.api.console.Terminal;
-import org.apache.karaf.shell.impl.action.command.ActionCommand;
+import org.apache.karaf.shell.impl.action.command.ManagerImpl;
 import org.apache.karaf.shell.support.converter.GenericType;
-import org.apache.karaf.shell.support.converter.ReifiedType;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.wiring.BundleWiring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +52,7 @@ public class CommandExtension implements Extension, Satisfiable {
     private static final Logger LOGGER = LoggerFactory.getLogger(CommandExtension.class);
 
     private final Bundle bundle;
+    private final ManagerImpl manager;
     private final Registry registry;
     private final CountDownLatch started;
     private final MultiServiceTracker tracker;
@@ -70,7 +61,10 @@ public class CommandExtension implements Extension, Satisfiable {
 
     public CommandExtension(Bundle bundle, Registry registry) {
         this.bundle = bundle;
-        this.registry = registry;
+        this.registry = new RegistryImpl(registry);
+        this.registry.register(bundle.getBundleContext());
+        this.manager = new ManagerImpl(this.registry, registry);
+        this.registry.register(this.manager);
         this.started = new CountDownLatch(1);
         this.tracker = new MultiServiceTracker(bundle.getBundleContext(), this);
     }
@@ -122,6 +116,9 @@ public class CommandExtension implements Extension, Satisfiable {
                 }
             }
             tracker.open();
+            if (!tracker.isSatisfied()) {
+                LOGGER.info("Command registration delayed. Missing dependencies: " + tracker.getMissingServices());
+            }
         } finally {
             started.countDown();
         }
@@ -141,93 +138,51 @@ public class CommandExtension implements Extension, Satisfiable {
         if (reg == null) {
             return;
         }
-        if (Action.class.isAssignableFrom(clazz)) {
-            final Command cmd = clazz.getAnnotation(Command.class);
-            if (cmd == null) {
-                throw new IllegalArgumentException("Command " + clazz.getName() + " is not annotated with @Command");
-            }
-            // Create trackers
-            for (Class<?> cl = clazz; cl != Object.class; cl = cl.getSuperclass()) {
-                for (Field field : cl.getDeclaredFields()) {
-                    if (field.getAnnotation(Reference.class) != null) {
-                        GenericType type = new GenericType(field.getType());
-                        Class clazzRef = type.getRawClass() == List.class ? type.getActualTypeArgument(0).getRawClass() : type.getRawClass();
-                        if (field.getType() != BundleContext.class
-                                && field.getType() != Session.class
-                                && field.getType() != Terminal.class
-                                && field.getType() != History.class
-                                && field.getType() != Registry.class
-                                && field.getType() != SessionFactory.class
-                                && !registry.hasService(clazzRef)) {
-                            tracker.track(field.getType());
-                        }
+        // Create trackers
+        for (Class<?> cl = clazz; cl != Object.class; cl = cl.getSuperclass()) {
+            for (Field field : cl.getDeclaredFields()) {
+                if (field.getAnnotation(Reference.class) != null) {
+                    GenericType type = new GenericType(field.getType());
+                    Class clazzRef = type.getRawClass() == List.class ? type.getActualTypeArgument(0).getRawClass() : type.getRawClass();
+                    if (clazzRef != BundleContext.class
+                            && clazzRef != Session.class
+                            && clazzRef != Terminal.class
+                            && clazzRef != History.class
+                            && clazzRef != Registry.class
+                            && clazzRef != SessionFactory.class
+                            && !registry.hasService(clazzRef)) {
+                        track(clazzRef);
                     }
                 }
             }
-            satisfiables.add(new AutoRegisterCommand((Class<? extends Action>) clazz));
         }
-        if (Completer.class.isAssignableFrom(clazz)) {
-            // Create trackers
-            for (Class<?> cl = clazz; cl != Object.class; cl = cl.getSuperclass()) {
-                for (Field field : cl.getDeclaredFields()) {
-                    if (field.getAnnotation(Reference.class) != null) {
-                        if (field.getType() != BundleContext.class) {
-                            tracker.track(field.getType());
-                        }
-                    }
-                }
-            }
-            satisfiables.add(new AutoRegisterCompleter((Class<? extends Completer>) clazz));
-        }
+        satisfiables.add(new AutoRegister(clazz));
     }
 
-    public class AutoRegisterCompleter implements Satisfiable {
+    protected void track(final Class clazzRef) {
+        tracker.track(clazzRef);
+        registry.register(new Callable() {
+            @Override
+            public Object call() throws Exception {
+                return tracker.getService(clazzRef);
+            }
+        }, clazzRef);
+    }
 
-        private final Class<? extends Completer> clazz;
-        private Completer completer;
+    public class AutoRegister implements Satisfiable {
 
-        public AutoRegisterCompleter(Class<? extends Completer> clazz) {
+        private final Class<?> clazz;
+
+        public AutoRegister(Class<?> clazz) {
             this.clazz = clazz;
         }
 
         @Override
         public void found() {
             try {
-                // Create completer
-                completer = clazz.newInstance();
-                Set<String> classes = new HashSet<String>();
-                // Inject services
-                for (Class<?> cl = clazz; cl != Object.class; cl = cl.getSuperclass()) {
-                    classes.add(cl.getName());
-                    for (Class c : cl.getInterfaces()) {
-                        classes.add(c.getName());
-                    }
-                    for (Field field : cl.getDeclaredFields()) {
-                        if (field.getAnnotation(Reference.class) != null) {
-                            Object value;
-                            if (field.getType() == BundleContext.class) {
-                                value = CommandExtension.this.bundle.getBundleContext();
-                            } else {
-                                value = CommandExtension.this.tracker.getService(field.getType());
-                            }
-                            if (value == null) {
-                                throw new RuntimeException("No OSGi service matching " + field.getType().getName());
-                            }
-                            field.setAccessible(true);
-                            field.set(completer, value);
-                        }
-                    }
-                }
-                for (Method method : clazz.getDeclaredMethods()) {
-                    Init ann = method.getAnnotation(Init.class);
-                    if (ann != null && method.getParameterTypes().length == 0 && method.getReturnType() == void.class) {
-                        method.setAccessible(true);
-                        method.invoke(completer);
-                    }
-                }
-                registry.register(completer);
+                manager.register(clazz);
             } catch (Exception e) {
-                throw new RuntimeException("Unable to creation service " + clazz.getName(), e);
+                throw new RuntimeException("Unable to create service " + clazz.getName(), e);
             }
         }
 
@@ -239,96 +194,9 @@ public class CommandExtension implements Extension, Satisfiable {
 
         @Override
         public void lost() {
-            if (completer != null) {
-                for (Method method : clazz.getDeclaredMethods()) {
-                    Destroy ann = method.getAnnotation(Destroy.class);
-                    if (ann != null && method.getParameterTypes().length == 0 && method.getReturnType() == void.class) {
-                        method.setAccessible(true);
-                        try {
-                            method.invoke(completer);
-                        } catch (Exception e) {
-                            LOGGER.warn("Error destroying service", e);
-                        }
-                    }
-                }
-                registry.unregister(completer);
-            }
+            manager.unregister(clazz);
         }
 
-    }
-
-    public class AutoRegisterCommand extends ActionCommand implements Satisfiable {
-
-        public AutoRegisterCommand(Class<? extends Action> actionClass) {
-            super(actionClass);
-        }
-
-        @Override
-        public void found() {
-            registry.register(this);
-        }
-
-        @Override
-        public void updated() {
-        }
-
-        @Override
-        public void lost() {
-            registry.unregister(this);
-        }
-
-        @Override
-        protected Object getDependency(ReifiedType type) {
-            if (type.getRawClass() == BundleContext.class) {
-                return CommandExtension.this.bundle.getBundleContext();
-            }  else {
-                Object value = CommandExtension.this.tracker.getService(type.getRawClass());
-                if (value == null) {
-                    if (type.getRawClass() == List.class) {
-                        value = registry.getServices(type.getActualTypeArgument(0).getRawClass());
-                    } else {
-                        value = registry.getService(type.getRawClass());
-                    }
-                }
-                return value;
-            }
-        }
-
-        @Override
-        protected Completer getCompleter(Class<?> clazz) {
-            return new ProxyServiceCompleter(CommandExtension.this.bundle.getBundleContext(), clazz);
-        }
-
-    }
-
-    public static class ProxyServiceCompleter implements Completer {
-        private final BundleContext context;
-        private final Class<?> clazz;
-
-        public ProxyServiceCompleter(BundleContext context, Class<?> clazz) {
-            this.context = context;
-            this.clazz = clazz;
-        }
-
-        @Override
-        public int complete(Session session, CommandLine commandLine, List<String> candidates) {
-            Object service = session.getRegistry().getService(clazz);
-            if (service instanceof Completer) {
-                return ((Completer) service).complete(session, commandLine, candidates);
-            }
-            ServiceReference<?> ref = context.getServiceReference(clazz);
-            if (ref != null) {
-                Object completer = context.getService(ref);
-                if (completer instanceof Completer) {
-                    try {
-                        return ((Completer) completer).complete(session, commandLine, candidates);
-                    } finally {
-                        context.ungetService(ref);
-                    }
-                }
-            }
-            return -1;
-        }
     }
 
 }

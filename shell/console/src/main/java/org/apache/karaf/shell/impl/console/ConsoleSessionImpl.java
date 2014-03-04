@@ -27,7 +27,8 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.io.Reader;
-import java.util.HashMap;
+import java.lang.management.ManagementFactory;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -42,18 +43,21 @@ import jline.console.history.PersistentHistory;
 import org.apache.felix.service.command.CommandProcessor;
 import org.apache.felix.service.command.CommandSession;
 import org.apache.felix.service.command.Converter;
+import org.apache.felix.service.command.Function;
 import org.apache.felix.service.threadio.ThreadIO;
+import org.apache.karaf.shell.api.console.Command;
 import org.apache.karaf.shell.api.console.Completer;
 import org.apache.karaf.shell.api.console.History;
 import org.apache.karaf.shell.api.console.Registry;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.karaf.shell.api.console.Terminal;
+import org.apache.karaf.shell.impl.console.parsing.Parser;
 import org.apache.karaf.shell.support.ShellUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConsoleSessionImpl extends HeadlessSessionImpl {
+public class ConsoleSessionImpl implements Session {
 
     public static final String SHELL_INIT_SCRIPT = "karaf.shell.init.script";
     public static final String SHELL_HISTORY_MAXSIZE = "karaf.shell.history.maxSize";
@@ -62,23 +66,28 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsoleSessionImpl.class);
 
-    protected ThreadIO threadIO;
-    private ConsoleReader reader;
-    private BlockingQueue<Integer> queue;
-    private boolean interrupt;
-    private Thread pipe;
-    volatile private boolean running;
-    volatile private boolean eof;
+    // Input stream
+    final BlockingQueue<Integer> queue = new ArrayBlockingQueue<Integer>(1024);
+    final ConsoleInputStream console = new ConsoleInputStream();
+    final Pipe pipe = new Pipe();
+    volatile boolean running;
+    volatile boolean eof;
+
+    final SessionFactory factory;
+    final ThreadIO threadIO;
+    final InputStream in;
+    final PrintStream out;
+    final PrintStream err;
     private Runnable closeCallback;
-    private Terminal terminal;
-    private History history;
-    private InputStream consoleInput;
-    private InputStream in;
-    private PrintStream out;
-    private PrintStream err;
-    private boolean secured;
+
+    final CommandSession session;
+    final Registry registry;
+    final Terminal terminal;
+    final History history;
+    final ConsoleReader reader;
+
+    private boolean interrupt;
     private Thread thread;
-    private final Registry registry;
 
     public ConsoleSessionImpl(SessionFactory factory,
                               CommandProcessor processor,
@@ -89,69 +98,86 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
                               Terminal term,
                               String encoding,
                               Runnable closeCallback) {
-        super(factory, null);
+        // Arguments
+        this.factory = factory;
         this.threadIO = threadIO;
         this.in = in;
         this.out = out;
         this.err = err;
-        this.secured = secured;
-        this.queue = new ArrayBlockingQueue<Integer>(1024);
-        this.terminal = term == null ? new JLineTerminal(new UnsupportedTerminal()) : term;
-        this.consoleInput = new ConsoleInputStream();
-        if (secured) {
-            this.session = new DelegateSession();
-        } else {
-            this.session = processor.createSession(consoleInput, out, err);
-        }
-        this.session.put(Session.SCOPE, "shell:bundle:*");
-        this.session.put(Session.SUBSHELL, "");
-        this.setCompletionMode();
         this.closeCallback = closeCallback;
 
+        // Terminal
+        terminal = term == null ? new JLineTerminal(new UnsupportedTerminal()) : term;
+
+
+        // Console reader
         try {
             reader = new ConsoleReader(null,
-                    this.consoleInput,
-                    this.out,
-                    this.terminal instanceof JLineTerminal ? ((JLineTerminal) this.terminal).getTerminal() : new KarafTerminal(this.terminal),
+                    console,
+                    out,
+                    terminal instanceof JLineTerminal ? ((JLineTerminal) terminal).getTerminal() : new KarafTerminal(terminal),
                     encoding);
         } catch (IOException e) {
             throw new RuntimeException("Error opening console reader", e);
         }
 
+        // History
         final File file = getHistoryFile();
-
         try {
             file.getParentFile().mkdirs();
             reader.setHistory(new KarafFileHistory(file));
         } catch (Exception e) {
             LOGGER.error("Can not read history from file " + file + ". Using in memory history", e);
         }
-
-        if (reader != null && reader.getHistory() instanceof MemoryHistory) {
+        if (reader.getHistory() instanceof MemoryHistory) {
             String maxSizeStr = System.getProperty(SHELL_HISTORY_MAXSIZE);
             if (maxSizeStr != null) {
-                ((MemoryHistory)reader.getHistory()).setMaxSize(Integer.parseInt(maxSizeStr));
+                ((MemoryHistory) this.reader.getHistory()).setMaxSize(Integer.parseInt(maxSizeStr));
             }
         }
-
         history = new HistoryWrapper(reader.getHistory());
 
+        // Registry
         registry = new RegistryImpl(factory.getRegistry());
+        registry.register(factory);
+        registry.register(this);
+        registry.register(registry);
+        registry.register(terminal);
+        registry.register(history);
 
+        // Completers
+        Completer completer = new CommandsCompleter(factory);
+        reader.addCompleter(new CompleterAsCompletor(this, completer));
+        registry.register(completer);
+        registry.register(new CommandNamesCompleter());
+
+        // Session
+        session = processor.createSession(console, out, err);
+        Properties sysProps = System.getProperties();
+        for (Object key : sysProps.keySet()) {
+            session.put(key.toString(), sysProps.get(key));
+        }
         session.put(".session", this);
         session.put(".commandSession", session);
         session.put(".jline.reader", reader);
+        session.put(".jline.terminal", reader.getTerminal());
         session.put(".jline.history", reader.getHistory());
-
-        Completer completer = new CommandsCompleter(factory);
-        registry.register(completer);
-        reader.addCompleter(new CompleterAsCompletor(this, completer));
-
-        registry.register(new CommandNamesCompleter());
-
-        pipe = new Thread(new Pipe());
-        pipe.setName("gogo shell pipe thread");
-        pipe.setDaemon(true);
+        session.put(Session.SCOPE, "shell:bundle:*");
+        session.put(Session.SUBSHELL, "");
+        session.put(Session.COMPLETION_MODE, loadCompletionMode());
+        session.put("USER", ShellUtil.getCurrentUserName());
+        session.put("APPLICATION", System.getProperty("karaf.name", "root"));
+        session.put("#LINES", new Function() {
+            public Object execute(CommandSession session, List<Object> arguments) throws Exception {
+                return Integer.toString(terminal.getHeight());
+            }
+        });
+        session.put("#COLUMNS", new Function() {
+            public Object execute(CommandSession session, List<Object> arguments) throws Exception {
+                return Integer.toString(terminal.getWidth());
+            }
+        });
+        session.put("pid", getPid());
     }
 
     /**
@@ -162,10 +188,6 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
     protected File getHistoryFile() {
         String defaultHistoryPath = new File(System.getProperty("user.home"), ".karaf/karaf.history").toString();
         return new File(System.getProperty("karaf.history", defaultHistoryPath));
-    }
-
-    public boolean isSecured() {
-        return secured;
     }
 
     @Override
@@ -207,7 +229,7 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
 
     public void run() {
         try {
-            threadIO.setStreams(consoleInput, out, err);
+            threadIO.setStreams(session.getKeyboard(), out, err);
             thread = Thread.currentThread();
             running = true;
             pipe.start();
@@ -247,23 +269,68 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
     }
 
     @Override
+    public Object execute(CharSequence commandline) throws Exception {
+        return session.execute(commandline);
+    }
+
+    @Override
+    public Object get(String name) {
+        return session.get(name);
+    }
+
+    @Override
+    public void put(String name, Object value) {
+        session.put(name, value);
+    }
+
+    @Override
+    public InputStream getKeyboard() {
+        return session.getKeyboard();
+    }
+
+    @Override
+    public PrintStream getConsole() {
+        return session.getConsole();
+    }
+
+    @Override
+    public String resolveCommand(String name) {
+        // TODO: optimize
+        if (!name.contains(":")) {
+            String[] scopes = ((String) get(Session.SCOPE)).split(":");
+            List<Command> commands = registry.getCommands();
+            for (String scope : scopes) {
+                for (Command command : commands) {
+                    if ((Session.SCOPE_GLOBAL.equals(scope) || command.getScope().equals(scope)) && command.getName().equals(name)) {
+                        return command.getScope() + ":" + name;
+                    }
+                }
+            }
+        }
+        return name;
+    }
+
+    @Override
     public String readLine(String prompt, Character mask) throws IOException {
         return reader.readLine(prompt, mask);
     }
 
-    private void setCompletionMode() {
+    private String loadCompletionMode() {
+        String mode;
         try {
             File shellCfg = new File(System.getProperty("karaf.etc"), "/org.apache.karaf.shell.cfg");
             Properties properties = new Properties();
             properties.load(new FileInputStream(shellCfg));
-            if (properties.get("completionMode") != null) {
-                this.session.put(Session.COMPLETION_MODE, properties.get("completionMode"));
-            } else {
+            mode = (String) properties.get("completionMode");
+            if (mode == null) {
                 LOGGER.debug("completionMode property is not defined in etc/org.apache.karaf.shell.cfg file. Using default completion mode.");
+                mode = Session.COMPLETION_MODE_GLOBAL;
             }
         } catch (Exception e) {
             LOGGER.warn("Can't read {}/org.apache.karaf.shell.cfg file. The completion is set to default.", System.getProperty("karaf.etc"));
+            mode = Session.COMPLETION_MODE_GLOBAL;
         }
+        return mode;
     }
 
     private String readAndParseCommand() throws IOException {
@@ -407,6 +474,12 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
         thread.interrupt();
     }
 
+    private String getPid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        String[] parts = name.split("@");
+        return parts[0];
+    }
+
     private class ConsoleInputStream extends InputStream {
         private int read(boolean wait) throws IOException {
             if (!running) {
@@ -471,7 +544,12 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
         }
     }
 
-    private class Pipe implements Runnable {
+    private class Pipe extends Thread {
+        public Pipe() {
+            super("Karaf shell pipe thread");
+            setDaemon(true);
+        }
+
         public void run() {
             try {
                 while (running) {
@@ -485,7 +563,7 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
                         } else if (c == 3 && !ShellUtil.getBoolean(ConsoleSessionImpl.this, Session.IGNORE_INTERRUPTS)) {
                             err.println("^C");
                             reader.getCursorBuffer().clear();
-                            interrupt();
+                            ConsoleSessionImpl.this.interrupt();
                         }
                         queue.put(c);
                     } catch (Throwable t) {
@@ -499,88 +577,6 @@ public class ConsoleSessionImpl extends HeadlessSessionImpl {
                 } catch (InterruptedException e) {
                 }
             }
-        }
-    }
-
-    static class DelegateSession implements CommandSession {
-        final Map<String, Object> attrs = new HashMap<String, Object>();
-        volatile CommandSession delegate;
-
-        @Override
-        public Object execute(CharSequence commandline) throws Exception {
-            if (delegate != null)
-                return delegate.execute(commandline);
-
-            throw new UnsupportedOperationException();
-        }
-
-        void setDelegate(CommandSession s) {
-            synchronized (this) {
-                for (Map.Entry<String, Object> entry : attrs.entrySet()) {
-                    s.put(entry.getKey(), entry.getValue());
-                }
-            }
-            delegate = s;
-        }
-
-        @Override
-        public void close() {
-            if (delegate != null)
-                delegate.close();
-        }
-
-        @Override
-        public InputStream getKeyboard() {
-            if (delegate != null)
-                return delegate.getKeyboard();
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public PrintStream getConsole() {
-            if (delegate != null)
-                return delegate.getConsole();
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Object get(String name) {
-            if (delegate != null)
-                return delegate.get(name);
-
-            return attrs.get(name);
-        }
-
-        // you can put attributes on this session before it's delegate is set...
-        @Override
-        public void put(String name, Object value) {
-            if (delegate != null) {
-                delegate.put(name, value);
-                return;
-            }
-
-            // there is no delegate yet, so we'll keep the attributes locally
-            synchronized (this) {
-                attrs.put(name, value);
-            }
-        }
-
-        @Override
-        public CharSequence format(Object target, int level) {
-            if (delegate != null)
-                return delegate.format(target, level);
-
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Object convert(Class<?> type, Object instance) {
-            if (delegate != null)
-                return delegate.convert(type, instance);
-
-            throw new UnsupportedOperationException();
         }
     }
 

@@ -107,7 +107,7 @@ public class SshAction implements Action {
         if (username == null) {
             log.debug("Prompting user for login");
             if (username == null) {
-                username = readLine("Login: ");
+                username = session.readLine("Login: ", null);
             }
         }
 
@@ -148,7 +148,7 @@ public class SshAction implements Action {
                 if (!authed) {
                     if (password == null) {
                         log.debug("Prompting user for password");
-                        password = readLine("Password: ");
+                        password = session.readLine("Password: ", '*');
                     } else {
                         log.debug("Password provided using command line option");
                     }
@@ -215,10 +215,6 @@ public class SshAction implements Action {
     private int getTermWidth() {
         Terminal term = session.getTerminal();
         return term != null ? term.getWidth() : 80;
-    }
-
-    public String readLine(String msg) throws IOException {
-        return session.readLine(msg, null);
     }
 
 }

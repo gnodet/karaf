@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.List;
 
+import org.apache.felix.service.command.CommandProcessor;
 import org.apache.felix.service.command.CommandSession;
 import org.apache.karaf.shell.api.console.Command;
 import org.apache.karaf.shell.api.console.History;
@@ -33,16 +34,21 @@ import org.apache.karaf.shell.api.console.Terminal;
 
 public class HeadlessSessionImpl implements Session {
 
-    private boolean quit;
+    final SessionFactory factory;
+    final CommandSession session;
+    final Registry registry;
 
-    SessionFactory factory;
-    CommandSession session;
-    Registry registry;
-
-    public HeadlessSessionImpl(SessionFactory factory, CommandSession session) {
+    public HeadlessSessionImpl(SessionFactory factory, CommandProcessor processor, InputStream in, PrintStream out, PrintStream err) {
+        // Factory
         this.factory = factory;
-        this.session = session;
+        // Registry
         this.registry = new RegistryImpl(factory.getRegistry());
+        this.registry.register(factory);
+        this.registry.register(registry);
+        this.registry.register(this);
+        // Session
+        this.session = processor.createSession(in, out, err);
+        this.session.put(".session", this);
     }
 
     public CommandSession getSession() {
@@ -76,49 +82,7 @@ public class HeadlessSessionImpl implements Session {
 
     @Override
     public String readLine(String prompt, Character mask) throws IOException {
-        // TODO: handle mask
-        InputStream in = getKeyboard();
-        PrintStream out = getConsole();
-
-        StringBuilder sb = new StringBuilder();
-        out.print(prompt);
-
-        while (!quit)
-        {
-            out.flush();
-            int c = in.read();
-
-            switch (c)
-            {
-                case -1:
-                case 4: // EOT, ^D from telnet
-                    quit = true;
-                    break;
-
-                case '\r':
-                case '\n':
-                    if (sb.length() > 0)
-                    {
-                        return sb.toString();
-                    }
-                    out.print(prompt);
-                    break;
-
-                case '\b':
-                    if (sb.length() > 0)
-                    {
-                        out.print("\b \b");
-                        sb.deleteCharAt(sb.length() - 1);
-                    }
-                    break;
-
-                default:
-                    sb.append((char) c);
-                    break;
-            }
-        }
-
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -165,7 +129,6 @@ public class HeadlessSessionImpl implements Session {
 
     @Override
     public void close() {
-        quit = true;
         session.close();
     }
 

@@ -157,4 +157,12 @@ public final class SingleServiceTracker<T> {
         }
     }
 
+    public boolean isSatisfied() {
+        return service.get() != null;
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
 }

@@ -18,6 +18,8 @@
  */
 package org.apache.karaf.shell.impl.action.osgi;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,6 +66,20 @@ public class MultiServiceTracker implements Satisfiable {
         for (SingleServiceTracker tracker : trackers.values()) {
             tracker.close();
         }
+    }
+
+    public boolean isSatisfied() {
+        return count.get() == trackers.size();
+    }
+
+    public List<String> getMissingServices() {
+        List<String> missing = new ArrayList<String>();
+        for (SingleServiceTracker tracker : trackers.values()) {
+            if (!tracker.isSatisfied()) {
+                missing.add(tracker.getClassName());
+            }
+        }
+        return missing;
     }
 
     @Override

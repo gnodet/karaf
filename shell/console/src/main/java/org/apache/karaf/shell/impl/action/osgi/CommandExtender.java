@@ -21,6 +21,7 @@ package org.apache.karaf.shell.impl.action.osgi;
 import org.apache.felix.utils.extender.AbstractExtender;
 import org.apache.felix.utils.extender.Extension;
 import org.apache.karaf.shell.api.console.Registry;
+import org.apache.karaf.shell.impl.action.command.ManagerImpl;
 import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,7 @@ public class CommandExtender extends AbstractExtender {
 
     public CommandExtender(Registry registry) {
         this.registry = registry;
+        this.registry.register(new ManagerImpl(this.registry, this.registry));
     }
 
     //

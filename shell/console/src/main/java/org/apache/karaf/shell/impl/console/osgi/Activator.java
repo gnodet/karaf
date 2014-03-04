@@ -21,6 +21,7 @@ package org.apache.karaf.shell.impl.console.osgi;
 import org.apache.felix.gogo.runtime.threadio.ThreadIOImpl;
 import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.karaf.shell.impl.action.osgi.CommandExtender;
+import org.apache.karaf.shell.impl.action.command.ManagerImpl;
 import org.apache.karaf.shell.impl.console.SessionFactoryImpl;
 import org.apache.karaf.shell.impl.console.TerminalFactory;
 import org.apache.karaf.shell.impl.console.osgi.secured.SecuredSessionFactoryImpl;
@@ -50,6 +51,9 @@ public class Activator implements BundleActivator {
         sessionFactory = new SecuredSessionFactoryImpl(context, threadIO);
         sessionFactory.getCommandProcessor().addConverter(new Converters(context));
         sessionFactory.getCommandProcessor().addConstant(".context", context.getBundle(0).getBundleContext());
+
+        sessionFactory.register(new ManagerImpl(sessionFactory, sessionFactory));
+
         sessionFactoryRegistration = context.registerService(SessionFactory.class.getName(), sessionFactory, null);
 
         actionExtender = new CommandExtender(sessionFactory);

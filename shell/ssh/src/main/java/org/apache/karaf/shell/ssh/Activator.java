@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.karaf.shell.api.action.lifecycle.Manager;
 import org.apache.karaf.shell.ssh.util.SingleServiceTracker;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.api.console.SessionFactory;
@@ -118,8 +119,10 @@ public class Activator implements BundleActivator, ManagedService {
 
     private void bindSessionFactory(final SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
-        sessionFactory.getRegistry().register(sshServerFactory, SshServer.class);
-        sessionFactory.getRegistry().register(sshClientFactory);
+        this.sessionFactory.getRegistry().register(sshServerFactory, SshServer.class);
+        this.sessionFactory.getRegistry().register(sshClientFactory);
+        this.sessionFactory.getRegistry().getService(Manager.class).register(SshServerAction.class);
+        this.sessionFactory.getRegistry().getService(Manager.class).register(SshAction.class);
         if (Boolean.parseBoolean(Activator.this.bundleContext.getProperty("karaf.startRemoteShell"))) {
             server = createSshServer(sessionFactory);
             try {
@@ -131,6 +134,8 @@ public class Activator implements BundleActivator, ManagedService {
     }
 
     private void unbindSessionFactory() {
+        this.sessionFactory.getRegistry().getService(Manager.class).unregister(SshAction.class);
+        this.sessionFactory.getRegistry().getService(Manager.class).unregister(SshServerAction.class);
         this.sessionFactory.getRegistry().unregister(sshClientFactory);
         this.sessionFactory.getRegistry().unregister(sshServerFactory);
         SshServer srv = server;

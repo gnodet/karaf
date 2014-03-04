@@ -37,13 +37,12 @@ import java.util.List;
 
 import org.apache.felix.gogo.runtime.threadio.ThreadIOImpl;
 import org.apache.felix.service.threadio.ThreadIO;
-import org.apache.karaf.shell.api.console.Completer;
+import org.apache.karaf.shell.api.action.lifecycle.Manager;
 import org.apache.karaf.shell.api.console.Registry;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.api.console.SessionFactory;
 import org.apache.karaf.shell.api.console.Terminal;
-import org.apache.karaf.shell.impl.action.command.ActionCommand;
-import org.apache.karaf.shell.support.converter.ReifiedType;
+import org.apache.karaf.shell.impl.action.command.ManagerImpl;
 import org.apache.karaf.shell.support.NameScoping;
 import org.apache.karaf.shell.impl.console.JLineTerminal;
 import org.apache.karaf.shell.impl.console.SessionFactoryImpl;
@@ -146,7 +145,7 @@ public class Main {
 
             // Shell is directly executing a sub/command, we don't setup a terminal and console
             // in this case, this avoids us reading from stdin un-necessarily.
-            Session session = sessionFactory.createSession(in, out, err);
+            Session session = sessionFactory.create(in, out, err);
             session.put("USER", user);
             session.put("APPLICATION", application);
             session.put(NameScoping.MULTI_SCOPE_MODE_KEY, Boolean.toString(isMultiScopeMode()));
@@ -202,6 +201,7 @@ public class Main {
     }
 
     protected void discoverCommands(Registry registry, ClassLoader cl, String resource) throws IOException, ClassNotFoundException {
+        Manager manager = new ManagerImpl(registry, registry);
         Enumeration<URL> urls = cl.getResources(resource);
         while (urls.hasMoreElements()) {
             URL url = urls.nextElement();
@@ -211,25 +211,7 @@ public class Main {
                 line = line.trim();
                 if (line.length() > 0 && line.charAt(0) != '#') {
                     final Class<?> actionClass = cl.loadClass(line);
-                    if (org.apache.karaf.shell.api.action.Action.class.isAssignableFrom(actionClass)) {
-                        org.apache.karaf.shell.api.action.Command cmd = actionClass.getAnnotation(org.apache.karaf.shell.api.action.Command.class);
-                        if (cmd != null) {
-                            ActionCommand command = new ActionCommand((Class<? extends org.apache.karaf.shell.api.action.Action>) actionClass) {
-                                @Override
-                                protected Completer getCompleter(Class<?> clazz) {
-                                    // TODO
-                                    return null;
-                                }
-                                @Override
-                                protected Object getDependency(ReifiedType type) {
-                                    // TODO
-                                    return null;
-                                }
-                            };
-                            registry.register(command);
-                        }
-                    }
-                    // TODO: handle old commands ?
+                    manager.register(actionClass);
                 }
                 line = r.readLine();
             }

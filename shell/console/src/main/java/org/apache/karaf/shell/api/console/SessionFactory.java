@@ -25,5 +25,6 @@ public interface SessionFactory {
 
     Session create(InputStream in, PrintStream out, PrintStream err, Terminal term, String encoding, Runnable closeCallback);
 
-    Session createSession(InputStream in, PrintStream out, PrintStream err);
+    Session create(InputStream in, PrintStream out, PrintStream err);
+
 }

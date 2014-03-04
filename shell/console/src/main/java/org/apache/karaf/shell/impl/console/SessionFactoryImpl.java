@@ -114,47 +114,20 @@ public class SessionFactoryImpl extends RegistryImpl implements SessionFactory, 
                 throw new IllegalStateException("SessionFactory has been closed");
             }
             final Session session = new ConsoleSessionImpl(this, commandProcessor, threadIO, in, out, err, term, encoding, closeCallback);
-            final Terminal terminal = session.getTerminal();
-            session.put("USER", ShellUtil.getCurrentUserName());
-            session.put("APPLICATION", System.getProperty("karaf.name", "root"));
-            session.put("#LINES", new Function() {
-                public Object execute(CommandSession session, List<Object> arguments) throws Exception {
-                    return Integer.toString(terminal.getHeight());
-                }
-            });
-            session.put("#COLUMNS", new Function() {
-                public Object execute(CommandSession session, List<Object> arguments) throws Exception {
-                    return Integer.toString(terminal.getWidth());
-                }
-            });
-            session.put(".jline.terminal", terminal);
-            addSystemProperties(session);
-            session.put("pid", getPid());
             sessions.add(session);
             return session;
         }
     }
 
     @Override
-    public Session createSession(InputStream in, PrintStream out, PrintStream err) {
-        CommandSession session = commandProcessor.createSession(in, out, err);
-        Session s = new HeadlessSessionImpl(this, session);
-        session.put(".session", s);
-        return s;
-    }
-
-    private String getPid() {
-        String name = ManagementFactory.getRuntimeMXBean().getName();
-        String[] parts = name.split("@");
-        return parts[0];
-    }
-
-    private void addSystemProperties(Session session) {
-        Properties sysProps = System.getProperties();
-        Iterator<Object> it = sysProps.keySet().iterator();
-        while (it.hasNext()) {
-            String key = (String) it.next();
-            session.put(key, System.getProperty(key));
+    public Session create(InputStream in, PrintStream out, PrintStream err) {
+        synchronized (this) {
+            if (closed) {
+                throw new IllegalStateException("SessionFactory has been closed");
+            }
+            final Session session = new HeadlessSessionImpl(this, commandProcessor, in, out, err);
+            sessions.add(session);
+            return session;
         }
     }
 

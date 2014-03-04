@@ -106,7 +106,6 @@
                         <Private-Package>
                             org.apache.karaf.util
                         </Private-Package>
-                        <Karaf-Commands>org.apache.karaf.shell.ssh</Karaf-Commands>
                         <Bundle-Activator>org.apache.karaf.shell.ssh.Activator</Bundle-Activator>
                     </instructions>
                 </configuration>
