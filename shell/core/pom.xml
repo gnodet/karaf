@@ -28,10 +28,10 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>org.apache.karaf.shell.compatibility</artifactId>
+    <artifactId>org.apache.karaf.shell.core</artifactId>
     <packaging>bundle</packaging>
-    <name>Apache Karaf :: Shell :: Console Compatibility</name>
-    <description>This bundle provides compatibility with the previous console.</description>
+    <name>Apache Karaf :: Shell :: Core</name>
+    <description>This bundle provides OSGi shell integration and console support.</description>
 
     <properties>
         <appendedResourcesDirectory>${basedir}/../../etc/appended-resources</appendedResourcesDirectory>
@@ -68,10 +68,6 @@
         <dependency>
             <groupId>org.apache.karaf.shell</groupId>
             <artifactId>org.apache.karaf.shell.table</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.shell</groupId>
-            <artifactId>org.apache.karaf.shell.console</artifactId>
         </dependency>
 
         <dependency>
@@ -150,47 +146,33 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
-                        <Fragment-Host>
-                            org.apache.karaf.shell.console
-                        </Fragment-Host>
                         <Import-Package>
-                            !org.apache.felix.gogo.*,
-                            !org.apache.karaf.shell.inject.impl,
-                            org.osgi.service.event*;resolution:=optional,
-                            org.apache.karaf.branding*;resolution:=optional,
-                            org.apache.sshd.agent*;resolution:=optional,
+                            org.osgi.service.event;resolution:=optional,
+                            org.apache.karaf.branding;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.apache.karaf.shell.commands;version=${project.version},
-                            org.apache.karaf.shell.commands;version=2.3.0,
-                            org.apache.karaf.shell.commands.basic;version=${project.version},
-                            org.apache.karaf.shell.commands.basic;version=2.3.0,
-                            org.apache.karaf.shell.commands.converter;version=${project.version},
-                            org.apache.karaf.shell.commands.converter;version=2.3.0,
-                            org.apache.karaf.shell.commands.meta;version=${project.version},
-                            org.apache.karaf.shell.commands.meta;version=2.3.0,
-                            org.apache.karaf.shell.console;version=${project.version},
-                            org.apache.karaf.shell.console;version=2.3.0,
-                            org.apache.karaf.shell.console.commands;version=${project.version},
-                            org.apache.karaf.shell.console.commands;version=2.3.0,
-                            org.apache.karaf.shell.console.completer;version=${project.version},
-                            org.apache.karaf.shell.console.completer;version=2.3.0,
-                            org.apache.karaf.shell.console.factory;version=${project.version},
-                            org.apache.karaf.shell.inject;version=${project.version},
-                            org.apache.karaf.shell.util;version=${project.version},
-                            org.apache.karaf.shell.util;version=2.3.0,
-                            org.apache.felix.gogo*;version=${felix.gogo.version},
-                            org.apache.felix.service.command;version=${felix.gogo.version};status=provisional;mandatory:=status,
-                            org.apache.felix.service.threadio;version=${felix.gogo.version};status=provisional;mandatory:=status,
+                            org.apache.karaf.shell.api.*;version=${project.version},
+                            org.apache.karaf.shell.support.*;version=${project.version},
                         </Export-Package>
                         <Private-Package>
-                            org.apache.karaf.shell.compat,
-                            org.apache.karaf.shell.commands.ansi,
-                        	org.apache.karaf.shell.console.impl*,
-                            org.apache.karaf.shell.security.impl*,
-                            org.apache.karaf.shell.inject.impl*,
+                            org.apache.karaf.service.guard.tools,
+                            org.apache.karaf.shell.impl.*,
+                            org.apache.karaf.util.properties,
+                            org.apache.felix.utils.extender,
+                            org.apache.felix.utils.manifest,
+                            org.apache.felix.gogo.api,
+                            org.apache.felix.gogo.runtime,
+                            org.apache.felix.gogo.runtime.threadio,
+                            org.apache.felix.service.command,
+                            org.apache.felix.service.threadio,
                         </Private-Package>
+                        <Bundle-Activator>
+                            org.apache.karaf.shell.impl.console.osgi.Activator
+                        </Bundle-Activator>
+                        <Main-Class>
+                            org.apache.karaf.shell.impl.console.standalone.Main
+                        </Main-Class>
                     </instructions>
                     <unpackBundle>true</unpackBundle>
                 </configuration>

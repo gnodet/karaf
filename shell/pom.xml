@@ -34,9 +34,9 @@
     <name>Apache Karaf :: Shell</name>
 
     <modules>
-        <module>commands</module>
+        <module>core</module>
         <module>console</module>
-        <module>compatibility</module>
+        <module>commands</module>
         <module>ssh</module>
         <module>table</module>
     </modules>

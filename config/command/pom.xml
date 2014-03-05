@@ -44,7 +44,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.karaf.shell</groupId>
-            <artifactId>org.apache.karaf.shell.compatibility</artifactId>
+            <artifactId>org.apache.karaf.shell.console</artifactId>
         </dependency>
 
         <dependency>
