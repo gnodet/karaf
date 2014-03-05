@@ -24,8 +24,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Used to denote a class represents a command which is executable within a shell/scope or as a
- * command line process.
+ * Used to denote a class represents a command which is executable
+ * within a shell/scope or as a command line process.
+ *
+ * All classes annotated with @Command should implement the
+ * {@link org.apache.karaf.shell.api.action.Action} interface.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
@@ -37,7 +40,7 @@ public @interface Command
     String scope();
 
     /**
-     * REturns the name of the command if used inside a shell
+     * Returns the name of the command if used inside a shell
      */
     String name();
 
@@ -47,7 +50,12 @@ public @interface Command
     String description() default "";
 
     /**
-     * Returns a detailed description of the command
+     * Returns a detailed description of the command.
+     * This description will be shown in the help for the command.
+     * Longer descriptions can be externalized using a
+     * <code>classpath:[location]</code> url, in which case the
+     * descrition will be loaded from the bundle at the given location,
+     * relatively to the implementation of the command.
      */
     String detailedDescription() default "";
 }

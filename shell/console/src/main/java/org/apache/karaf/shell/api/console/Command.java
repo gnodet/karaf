@@ -16,14 +16,36 @@
  */
 package org.apache.karaf.shell.api.console;
 
+/**
+ * A <code>Command</code> is a named
+ * {@link org.apache.karaf.shell.api.console.Function}
+ * which also provides completion.
+ */
 public interface Command extends Function {
 
+    /**
+     * Retrieve the scope of this command.
+     */
     String getScope();
 
+    /**
+     * Retrieve the name of this command.
+     */
     String getName();
 
+    /**
+     * Retrieve the description of this command.
+     * This short command description will be printed
+     * when using the <code>help</code> command.
+     */
     String getDescription();
 
+    /**
+     * Retrieve the completer associated with this command.
+     *
+     * @param scoped whether the command is invoked from a subshell or not
+     * @return the {@link Completer} to use
+     */
     Completer getCompleter(boolean scoped);
 
 }

@@ -24,7 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Represents a positional argument on a command line (as opposed to an optional named {@link org.apache.karaf.shell.api.action.Option}
+ * Represents a positional argument on a command line (as opposed to an optional named {@link Option}
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
@@ -34,15 +34,40 @@ public @interface Argument
 
     String DEFAULT = "##default";
 
+    /**
+     * Name of the argument.
+     * By default, the field name will be used.
+     */
     String name() default DEFAULT;
 
+    /**
+     * A textual description of the argument.
+     */
     String description() default "";
 
+    /**
+     * Whether this argument is mandatory or not.
+     */
     boolean required() default false;
 
+    /**
+     * Position of the argument in the command line.
+     * When using multiple arguments, the indices must be
+     * starting from 0 and incrementing without any holes.
+     */
     int index() default 0;
 
+    /**
+     * The last argument can be multi-valued in which case
+     * the field type must be a List.
+     */
     boolean multiValued() default false;
 
+    /**
+     * The generated help displays default values for arguments.
+     * In case the value displayed in the help to the user should
+     * be different that the default value of the field, one
+     * can use this property to specify the value to display.
+     */
     String valueToShowInHelp() default DEFAULT_STRING;
 }

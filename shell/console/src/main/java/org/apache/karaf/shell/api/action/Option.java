@@ -24,7 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Used to mark an optional named command line option who's name typically starts with "--"
+ * Used to mark an optional named command line option who's name typically starts with "--" or "-".
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
@@ -32,15 +32,40 @@ public @interface Option
 {
     public static final String DEFAULT_STRING= "DEFAULT";
 
+    /**
+     * The name of this option.  Usually starting with a '-'.
+     */
     String name();
 
+    /**
+     * Specify a list of aliases for this option.
+     * Useful when using an option with short or long names.
+     */
     String[] aliases() default {};
 
+    /**
+     * A textual description of the option.
+     */
     String description() default "";
 
+    /**
+     * Whether this argument is mandatory or not.
+     */
     boolean required() default false;
 
+    /**
+     * The last argument can be multi-valued in which case
+     * the field type must be a List.  On the command line,
+     * multi-valued options are used with specifying the option
+     * multiple times with different values.
+     */
     boolean multiValued() default false;
 
+    /**
+     * The generated help displays default values for arguments.
+     * In case the value displayed in the help to the user should
+     * be different that the default value of the field, one
+     * can use this property to specify the value to display.
+     */
     String valueToShowInHelp() default DEFAULT_STRING;
 }

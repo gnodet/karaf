@@ -21,14 +21,39 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * The @Completion annotation can be used on a field annotated with
+ * {@link Option} or {@link Argument} to specify the completion
+ * method to use for this field.
+ *
+ * @see org.apache.karaf.shell.api.console.Completer
+ * @see org.apache.karaf.shell.support.completers.StringsCompleter
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 public @interface Completion {
 
+    /**
+     * The completer class to use for this field.
+     * The console registry will be used to look for
+     * a completer of this class.
+     *
+     * A special case for simple static completions is to use
+     * {@link org.apache.karaf.shell.support.completers.StringsCompleter},
+     * in which case, the <code>values</code> property will be used
+     * as the list of possible completions.
+     */
     Class<?> value();
 
+    /**
+     * When using a static completer, returns the possible values.
+     */
     String[] values() default { };
 
+    /**
+     * When using a static completer, indicates if completion
+     * should be done case sensitive or not.
+     */
     boolean caseSensitive() default false;
 
 }

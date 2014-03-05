@@ -18,6 +18,12 @@
  */
 package org.apache.karaf.shell.api.console;
 
+/**
+ * A <code>CommandLine</code> object will be created and
+ * given the {@link org.apache.karaf.shell.api.console.Completer}s to ease
+ * their work.  Arguments are separated and the cursor position within the
+ * current argument is given.
+ */
 public interface CommandLine {
 
     /**
@@ -43,12 +49,12 @@ public interface CommandLine {
     String[] getArguments();
 
     /**
-     * Retrieve the position of the cursor within the command line
+     * Retrieve the position of the cursor within the command line.
      */
     int getBufferPosition();
 
     /**
-     * Retrieve the full buffer
+     * Retrieve the full buffer.
      */
     String getBuffer();
 

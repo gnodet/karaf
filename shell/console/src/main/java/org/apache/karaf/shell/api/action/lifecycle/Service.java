@@ -23,6 +23,13 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Classes that need to be managed must be annotated
+ * with <code>@Service</code> annotation.
+ *
+ * Services can either implement {@link org.apache.karaf.shell.api.action.Action}
+ * or {@link org.apache.karaf.shell.api.console.Completer}.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface Service {

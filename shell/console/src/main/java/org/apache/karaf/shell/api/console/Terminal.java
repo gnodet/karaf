@@ -18,16 +18,34 @@
  */
 package org.apache.karaf.shell.api.console;
 
+/**
+ * Session terminal.
+ */
 public interface Terminal {
 
+    /**
+     * Width of the terminal.
+     */
     int getWidth();
 
+    /**
+     * Height of the terminal.
+     */
     int getHeight();
 
+    /**
+     * Whether ansi sequences are supported or not.
+     */
     boolean isAnsiSupported();
 
+    /**
+     * Whether echo is enabled or not.
+     */
     boolean isEchoEnabled();
 
+    /**
+     * Enable or disable echo.
+     */
     void setEchoEnabled(boolean enabled);
 
 }

@@ -22,6 +22,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 
+/**
+ * A <code>Session</code> can be used to execute commands.
+ *
+ * The {@link org.apache.karaf.shell.api.console.Registry} associated
+ * with this <code>Session</code> will contain: <ul>
+ *     <li>{@link SessionFactory}</li>
+ *     <li>{@link Command}s</li>
+ *     <li>{@link Session}</li>
+ *     <li>{@link Registry}</li>
+ *     <li>{@link History}</li>
+ *     <li>{@link Terminal}</li>
+ * </ul>
+ */
 public interface Session extends Runnable {
 
     //
@@ -99,14 +112,37 @@ public interface Session extends Runnable {
      */
     String readLine(String prompt, final Character mask) throws IOException;
 
+    /**
+     * Retrieve the {@link org.apache.karaf.shell.api.console.Terminal} associated
+     * with this <code>Session</code> or <code>null</code> if this <code>Session</code>
+     * is headless.
+     */
     Terminal getTerminal();
 
+    /**
+     * Retrieve the {@link org.apache.karaf.shell.api.console.History} associated
+     * with this <code>Session</code> or <code>null</code> if this <code>Session</code>
+     * is headless.
+     */
     History getHistory();
 
+    /**
+     * Retrieve the {@link org.apache.karaf.shell.api.console.Registry} associated
+     * with this <code>Session</code>.
+     */
     Registry getRegistry();
 
+    /**
+     * Retrieve the {@link org.apache.karaf.shell.api.console.SessionFactory} associated
+     * with this <code>Session</code>.
+     */
     SessionFactory getFactory();
 
+    /**
+     * Resolve a command name.  If the command name has no specified scope, the fully
+     * qualified command name will be returned, depending on the scopes and current
+     * subshell.
+     */
     String resolveCommand(String name);
 
     /**

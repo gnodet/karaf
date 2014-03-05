@@ -19,20 +19,38 @@
 package org.apache.karaf.shell.api.action;
 
 /**
- * An action allows to easily execute commands in karaf.
- * It can be assumed that each action is only accessed by a single thread at a time.
- * 
- * An Action is always part of an AbstractCommand. The AbstractCommand makes sure
- * the single threaded assumption above is true. Before the call to the execute method
- * the action is checked for annotated fields (@Argument, @Option). These fields
- * are populated from the command arguments before the action is called.
+ * An action is the default implementation of the commands in karaf.
+ * In OSGi, Actions are discovered using an extender and a new instance
+ * of the class is created when the command is invoked, so that the
+ * implementation does not need to be thread safe.
+ *
+ * Before the call to the execute method the action is checked for
+ * fields annotated with @Reference and injected with services coming
+ * from the SessionFactory's Registry or from the OSGi registry.
+ * Methods annotated with @Init are then called.  The next step is to
+ * inject command line parameters into fields annotated with @Option
+ * and @Argument and then call the execute method.
  * 
  * Any class implementing Action must have a no argument constructor. This
  * is necessary so the help generator can instantiate the class and get the 
- * default values. 
+ * default values.
+ *
+ * In order to make commands available from the non-OSGi shell,
+ * the commands must be listed in a file available at
+ * META-INF/services/org/apache/karaf/shell/commmands.
+ *
+ * @see org.apache.karaf.shell.api.action.Command
+ * @see org.apache.karaf.shell.api.action.lifecycle.Service
  */
 public interface Action {
 
+    /**
+     * Execute the action which has been injected with services from the
+     * registry, options and arguments from the command line.
+     *
+     * @return <code>null</code> or the result of the action execution
+     * @throws Exception
+     */
     Object execute() throws Exception;
 
 }

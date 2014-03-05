@@ -20,8 +20,19 @@ package org.apache.karaf.shell.api.console;
 
 import java.util.List;
 
+/**
+ * A <code>Completer</code> is used by the console to complete the command line.
+ */
 public interface Completer {
 
+    /**
+     * populate possible completion candidates.
+     *
+     * @param session the current {@link Session}
+     * @param commandLine the pre-parsed {@link CommandLine}
+     * @param candidates a list to fill with possible completion candidates
+     * @return the index of the{@link CommandLine} for which the completion will be relative
+     */
     int complete(Session session, CommandLine commandLine, List<String> candidates);
 
 }
