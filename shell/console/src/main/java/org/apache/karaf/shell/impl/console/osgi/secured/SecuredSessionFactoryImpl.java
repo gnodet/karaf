@@ -25,11 +25,14 @@ import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
+import org.apache.felix.gogo.runtime.CommandNotFoundException;
 import org.apache.felix.service.command.Function;
 import org.apache.felix.service.threadio.ThreadIO;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
@@ -91,18 +94,18 @@ public class SecuredSessionFactoryImpl extends SessionFactoryImpl implements Con
     protected boolean isVisible(Command command) {
         Dictionary<String, Object> config = getScopeConfig(command.getScope());
         if (config != null) {
-            boolean secured = false;
-            for (Enumeration<String> enu = config.keys(); enu.hasMoreElements(); ) {
-                String key = enu.nextElement();
-                if (key.equals(command.getName()) || key.startsWith(command.getName() + "[")) {
-                    String role = config.get(key).toString();
+            List<String> roles = new ArrayList<String>();
+            ACLConfigurationParser.getRolesForInvocation(command.getName(), null, null, config, roles);
+            if (roles.isEmpty()) {
+                return true;
+            } else {
+                for (String role : roles) {
                     if (currentUserHasRole(role)) {
                         return true;
                     }
-                    secured = true;
                 }
+                return false;
             }
-            return !secured;
         }
         return true;
     }
@@ -110,8 +113,11 @@ public class SecuredSessionFactoryImpl extends SessionFactoryImpl implements Con
     void checkSecurity(SecuredCommand command, Session session, List<Object> arguments) {
         Dictionary<String, Object> config = getScopeConfig(command.getScope());
         if (config != null) {
+            if (!isVisible(command)) {
+                throw new CommandNotFoundException(command.getScope() + ":" + command.getName());
+            }
             List<String> roles = new ArrayList<String>();
-            ACLConfigurationParser.Specificity s = ACLConfigurationParser.getRolesForInvocation(command.getName(), arguments.toArray(new Object[arguments.size()]), new String[0], config, roles);
+            ACLConfigurationParser.Specificity s = ACLConfigurationParser.getRolesForInvocation(command.getName(), new Object[] { arguments.toString() }, null, config, roles);
             if (s == ACLConfigurationParser.Specificity.NO_MATCH) {
                 return;
             }
@@ -120,7 +126,7 @@ public class SecuredSessionFactoryImpl extends SessionFactoryImpl implements Con
                     return;
                 }
             }
-            throw new SecurityException("Insufficient roles/credentials for operation");
+            throw new SecurityException("Insufficient credentials.");
         }
     }
 

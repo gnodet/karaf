@@ -24,9 +24,10 @@ import org.apache.felix.gogo.runtime.Closure;
 import org.apache.felix.service.command.CommandSession;
 import org.apache.felix.service.command.Function;
 import org.apache.karaf.shell.api.console.Command;
+import org.apache.karaf.shell.api.console.Completer;
 import org.apache.karaf.shell.api.console.Session;
 
-public class SecuredCommand implements Function {
+public class SecuredCommand implements Command, Function {
 
     private final SecuredSessionFactoryImpl factory;
     private final Command command;
@@ -42,6 +43,22 @@ public class SecuredCommand implements Function {
 
     public String getName() {
         return command.getName();
+    }
+
+    @Override
+    public String getDescription() {
+        return command.getDescription();
+    }
+
+    @Override
+    public Completer getCompleter(boolean scoped) {
+        return command.getCompleter(scoped);
+    }
+
+    @Override
+    public Object execute(Session session, List<Object> arguments) throws Exception {
+        factory.checkSecurity(this, session, arguments);
+        return command.execute(session, arguments);
     }
 
     @Override
@@ -61,8 +78,7 @@ public class SecuredCommand implements Function {
                 });
             }
         }
-        factory.checkSecurity(this, session, arguments);
-        return command.execute(session, arguments);
+        return execute(session, arguments);
     }
 
 
