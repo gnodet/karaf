@@ -184,7 +184,9 @@ public class Main {
     }
 
     protected SessionFactory createSessionFactory(ThreadIO threadio) {
-        return new SessionFactoryImpl(threadio);
+        SessionFactoryImpl sessionFactory = new SessionFactoryImpl(threadio);
+        sessionFactory.register(new ManagerImpl(sessionFactory, sessionFactory));
+        return sessionFactory;
     }
 
     /**
