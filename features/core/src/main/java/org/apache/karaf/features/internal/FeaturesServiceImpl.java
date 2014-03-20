@@ -153,13 +153,17 @@ public class FeaturesServiceImpl implements FeaturesService {
         listeners.remove(listener);
     }
 
-    public void setUrls(String uris) throws URISyntaxException {
+    public void setUrls(String uris) {
         String[] s = uris.split(",");
         this.uris = new HashSet<URI>();
         for (String value : s) {
             value = value.trim();
             if (!value.isEmpty()) {
-                this.uris.add(new URI(value));
+                try {
+                    this.uris.add(new URI(value));
+                } catch (URISyntaxException e) {
+                    LOGGER.warn("Invalid features repository URI: " + value);
+                }
             }
         }
     }
@@ -877,12 +881,12 @@ public class FeaturesServiceImpl implements FeaturesService {
         }
 	}
     
-    public void start() throws Exception {
+    public void start() {
         this.eventAdminListener = bundleManager.createAndRegisterEventAdminListener();
         initState();
     }
 
-    public void stop() throws Exception {
+    public void stop() {
         uris = new HashSet<URI>(repositories.keySet());
         while (!repositories.isEmpty()) {
             internalRemoveRepository(repositories.keySet().iterator().next());
