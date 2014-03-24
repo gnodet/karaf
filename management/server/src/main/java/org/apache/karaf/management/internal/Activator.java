@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.management.MBeanServer;
 import javax.management.NotCompliantMBeanException;
@@ -52,6 +53,7 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     private static final Logger LOGGER = LoggerFactory.getLogger(Activator.class);
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private AtomicBoolean scheduled = new AtomicBoolean();
     private BundleContext bundleContext;
     private Dictionary<String, ?> configuration;
     private ServiceRegistration registration;
@@ -66,6 +68,7 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     @Override
     public void start(BundleContext context) throws Exception {
         bundleContext = context;
+        scheduled.set(true);
 
         Hashtable<String, Object> props = new Hashtable<String, Object>();
         props.put(Constants.SERVICE_PID, "org.apache.karaf.management");
@@ -77,6 +80,9 @@ public class Activator implements BundleActivator, ManagedService, SingleService
                 bundleContext, KeystoreManager.class, this);
         configAdminTracker.open();
         keystoreManagerTracker.open();
+
+        scheduled.set(false);
+        reconfigure();
     }
 
     @Override
@@ -110,21 +116,30 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     }
 
     protected void reconfigure() {
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                doStop();
-                try {
-                    doStart();
-                } catch (Exception e) {
-                    LOGGER.warn("Error starting management layer", e);
+        if (scheduled.compareAndSet(false, true)) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    scheduled.set(false);
                     doStop();
+                    try {
+                        doStart();
+                    } catch (Exception e) {
+                        LOGGER.warn("Error starting management layer", e);
+                        doStop();
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     protected void doStart() throws Exception {
+        // This can happen while the bundle is starting as we register
+        // the ManagedService before creating the service trackers
+        if (configAdminTracker == null || keystoreManagerTracker == null) {
+            return;
+        }
+        // Verify dependencies
         ConfigurationAdmin configurationAdmin = configAdminTracker.getService();
         KeystoreManager keystoreManager = keystoreManagerTracker.getService();
         Dictionary<String, ?> config = configuration;
@@ -213,13 +228,13 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     }
 
     protected void doStop() {
-        if (serverRegistration != null) {
-            serverRegistration.unregister();
-            serverRegistration = null;
-        }
         if (securityRegistration != null) {
             securityRegistration.unregister();
             securityRegistration = null;
+        }
+        if (serverRegistration != null) {
+            serverRegistration.unregister();
+            serverRegistration = null;
         }
         if (connectorServerFactory != null) {
             try {

@@ -18,6 +18,10 @@
 package org.apache.karaf.deployer.features.osgi;
 
 import java.util.Hashtable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.felix.fileinstall.ArtifactListener;
 import org.apache.felix.fileinstall.ArtifactUrlTransformer;
@@ -36,6 +40,8 @@ public class Activator implements BundleActivator, SingleServiceTracker.SingleSe
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Activator.class);
 
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private AtomicBoolean scheduled = new AtomicBoolean();
     private BundleContext bundleContext;
     private ServiceRegistration urlHandlerRegistration;
     private ServiceRegistration urlTransformerRegistration;
@@ -45,14 +51,21 @@ public class Activator implements BundleActivator, SingleServiceTracker.SingleSe
     @Override
     public void start(BundleContext context) throws Exception {
         bundleContext = context;
+        scheduled.set(true);
+
         featuresServiceTracker = new SingleServiceTracker<FeaturesService>(
                 context, FeaturesService.class, this);
         featuresServiceTracker.open();
+
+        scheduled.set(false);
+        reconfigure();
     }
 
     @Override
     public void stop(BundleContext context) throws Exception {
         featuresServiceTracker.close();
+        executor.shutdown();
+        executor.awaitTermination(30, TimeUnit.SECONDS);
     }
 
     @Override
@@ -71,12 +84,20 @@ public class Activator implements BundleActivator, SingleServiceTracker.SingleSe
     }
 
     protected void reconfigure() {
-        doStop();
-        try {
-            doStart();
-        } catch (Exception e) {
-            LOGGER.warn("Error starting management layer", e);
-            doStop();
+        if (scheduled.compareAndSet(false, true)) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    scheduled.set(false);
+                    doStop();
+                    try {
+                        doStart();
+                    } catch (Exception e) {
+                        LOGGER.warn("Error starting features deployer", e);
+                        doStop();
+                    }
+                }
+            });
         }
     }
 

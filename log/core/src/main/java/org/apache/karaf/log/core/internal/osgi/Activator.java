@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.management.NotCompliantMBeanException;
 
@@ -49,6 +50,7 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     private static final Logger LOGGER = LoggerFactory.getLogger(Activator.class);
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private AtomicBoolean scheduled = new AtomicBoolean();
     private BundleContext bundleContext;
     private Dictionary<String, ?> configuration;
     private ServiceRegistration managedServiceRegistration;
@@ -61,6 +63,7 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     @Override
     public void start(BundleContext context) throws Exception {
         bundleContext = context;
+        scheduled.set(true);
 
         Hashtable<String, Object> props = new Hashtable<String, Object>();
         props.put(Constants.SERVICE_PID, "org.apache.karaf.log");
@@ -69,6 +72,9 @@ public class Activator implements BundleActivator, ManagedService, SingleService
         configAdminTracker = new SingleServiceTracker<ConfigurationAdmin>(
                 bundleContext, ConfigurationAdmin.class, this);
         configAdminTracker.open();
+
+        scheduled.set(false);
+        reconfigure();
     }
 
     @Override
@@ -101,22 +107,25 @@ public class Activator implements BundleActivator, ManagedService, SingleService
     }
 
     protected void reconfigure() {
-        executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                doStop();
-                try {
-                    doStart();
-                } catch (Exception e) {
-                    LOGGER.warn("Error starting management layer", e);
+        if (scheduled.compareAndSet(false, true)) {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    scheduled.set(false);
                     doStop();
+                    try {
+                        doStart();
+                    } catch (Exception e) {
+                        LOGGER.warn("Error starting management layer", e);
+                        doStop();
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     protected void doStart() throws Exception {
-        ConfigurationAdmin configurationAdmin = configAdminTracker.getService();
+        ConfigurationAdmin configurationAdmin = configAdminTracker != null ? configAdminTracker.getService() : null;
         Dictionary<String, ?> config = configuration;
         if (configurationAdmin == null) {
             return;
