@@ -26,6 +26,7 @@ import org.apache.karaf.shell.impl.action.command.ManagerImpl;
 import org.apache.karaf.shell.impl.action.osgi.CommandExtender;
 import org.apache.karaf.shell.impl.console.SessionFactoryImpl;
 import org.apache.karaf.shell.impl.console.TerminalFactory;
+import org.apache.karaf.shell.impl.console.osgi.gogo.Tracker;
 import org.apache.karaf.shell.impl.console.osgi.secured.SecuredSessionFactoryImpl;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -62,6 +63,8 @@ public class Activator implements BundleActivator {
         } catch (NoClassDefFoundError error) {
             // Ignore the listener if EventAdmin package isn't present
         }
+
+        new Tracker(context, sessionFactory).open();
 
         sessionFactory.register(new ManagerImpl(sessionFactory, sessionFactory));
 

@@ -141,6 +141,7 @@
                         <Export-Package>
                             org.apache.karaf.shell.api.*;version=${project.version},
                             org.apache.karaf.shell.support.*;version=${project.version},
+                            org.apache.felix.service.command;status=provisional;mandatory:=status
                         </Export-Package>
                         <Private-Package>
                             org.apache.karaf.service.guard.tools,
