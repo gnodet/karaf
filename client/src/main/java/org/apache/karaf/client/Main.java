@@ -22,10 +22,12 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -37,29 +39,32 @@ import jline.TerminalFactory;
 
 import jline.UnixTerminal;
 import jline.internal.TerminalLineSettings;
-import org.apache.sshd.ClientChannel;
-import org.apache.sshd.ClientSession;
-import org.apache.sshd.SshBuilder;
-import org.apache.sshd.SshClient;
 import org.apache.sshd.agent.SshAgent;
 import org.apache.sshd.agent.local.AgentImpl;
 import org.apache.sshd.agent.local.LocalAgentFactory;
-import org.apache.sshd.client.UserInteraction;
+import org.apache.sshd.client.ClientBuilder;
+import org.apache.sshd.client.SshClient;
+import org.apache.sshd.client.auth.UserInteraction;
 import org.apache.sshd.client.channel.ChannelShell;
 import org.apache.sshd.client.channel.PtyCapableChannelSession;
 import org.apache.sshd.client.future.ConnectFuture;
-import org.apache.sshd.client.kex.ECDHP256;
-import org.apache.sshd.client.kex.ECDHP384;
-import org.apache.sshd.client.kex.ECDHP521;
-import org.apache.sshd.common.KeyExchange;
 import org.apache.sshd.common.NamedFactory;
-import org.apache.sshd.common.PtyMode;
 import org.apache.sshd.common.RuntimeSshException;
-import org.apache.sshd.common.Session;
 import org.apache.sshd.common.SshConstants;
-import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
-import org.apache.sshd.common.util.Buffer;
+import org.apache.sshd.client.channel.ClientChannel;
+import org.apache.sshd.client.channel.PtyCapableChannelSession;
+import org.apache.sshd.client.future.ConnectFuture;
+import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.RuntimeSshException;
+import org.apache.sshd.common.SshConstants;
+import org.apache.sshd.common.channel.PtyMode;
+import org.apache.sshd.common.kex.KeyExchange;
+import org.apache.sshd.common.keyprovider.AbstractFileKeyPairProvider;
+import org.apache.sshd.common.session.Session;
+import org.apache.sshd.common.util.SecurityUtils;
+import org.apache.sshd.common.util.buffer.Buffer;
 import org.fusesource.jansi.AnsiConsole;
+import org.fusesource.jansi.internal.CLibrary;
 import org.slf4j.impl.SimpleLogger;
 
 /**
@@ -97,18 +102,9 @@ public class Main {
         Terminal terminal = null;
         int exitStatus = 0;
         try {
-            SshBuilder.ClientBuilder clientBuilder = SshBuilder.client();
-            clientBuilder.keyExchangeFactories(Arrays.<NamedFactory<KeyExchange>>asList(
-                     new ECDHP256.Factory(),
-                     new ECDHP256.Factory(),
-                     new ECDHP384.Factory(),
-                     new ECDHP384.Factory(),
-                     new ECDHP521.Factory(),
-                     new ECDHP521.Factory()
-                     )
-                );
+            ClientBuilder clientBuilder = ClientBuilder.builder();
 
-            client = (SshClient)clientBuilder.build();
+            client = clientBuilder.build();
             setupAgent(config.getUser(), config.getKeyFile(), client);
             final Console console = System.console();
             if (console != null) {
@@ -117,7 +113,7 @@ public class Main {
                         System.out.println(banner);
                     }
 
-                    public String[] interactive(String destination, String name, String instruction, String[] prompt, boolean[] echo) {
+                    public String[] interactive(String destination, String name, String instruction, String lang, String[] prompt, boolean[] echo) {
                         String[] answers = new String[prompt.length];
                         try {
                             for (int i = 0; i < prompt.length; i++) {
@@ -152,10 +148,12 @@ public class Main {
                 channel = session.createChannel("exec", config.getCommand() + "\n");
                 channel.setIn(new ByteArrayInputStream(new byte[0]));
             } else {
-                TerminalFactory.registerFlavor(TerminalFactory.Flavor.UNIX, NoInterruptUnixTerminal.class);
+                TerminalFactory.registerFlavor(TerminalFactory.Flavor.UNIX, UnixTerminal.class);
                 terminal = TerminalFactory.create();
                 if (terminal instanceof UnixTerminal) {
-                    ((UnixTerminal) terminal).disableLitteralNextCharacter();
+                    TerminalLineSettings settings = ((UnixTerminal) terminal).getSettings();
+                    settings.undef("vlnext");
+                    settings.undef("vintr");
                 }
                 channel = session.createChannel("shell");
                 ConsoleInputStream in = new ConsoleInputStream(terminal.wrapInIfNeeded(System.in));
@@ -298,8 +296,8 @@ public class Main {
             is.close();
             agent.addIdentity(keyPair, user);
             if (keyFile != null) {
-                String[] keyFiles = new String[]{keyFile};
-                FileKeyPairProvider fileKeyPairProvider = new FileKeyPairProvider(keyFiles);
+                AbstractFileKeyPairProvider fileKeyPairProvider = SecurityUtils.createFileKeyPairProvider();
+                fileKeyPairProvider.setPaths(Collections.singleton(Paths.get(keyFile)));
                 for (KeyPair key : fileKeyPairProvider.loadKeys()) {
                     agent.addIdentity(key, user);                
                 }

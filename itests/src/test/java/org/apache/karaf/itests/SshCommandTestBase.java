@@ -22,10 +22,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 
 import org.apache.karaf.features.Feature;
-import org.apache.sshd.ClientChannel;
-import org.apache.sshd.ClientSession;
-import org.apache.sshd.SshClient;
+import org.apache.sshd.client.SshClient;
+import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.future.ConnectFuture;
+import org.apache.sshd.client.session.ClientSession;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Assert;
