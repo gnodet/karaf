@@ -177,7 +177,7 @@ public class XmlRepository extends BaseRepository {
         protected boolean doRead(InputStream is) throws IOException {
             try {
                 StaxParser.XmlRepository oldXml = xml;
-                xml = StaxParser.parse(is, oldXml);
+                xml = StaxParser.parse(getUrl(), is, oldXml);
                 return oldXml != xml;
             } catch (XMLStreamException e) {
                 throw new IOException("Unable to read xml repository", e);
