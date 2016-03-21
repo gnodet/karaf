@@ -246,7 +246,7 @@
         <hibernate42.version>4.2.15.Final</hibernate42.version>
         <hibernate43.version>4.3.6.Final</hibernate43.version>
         <hibernate.validator.version>5.2.4.Final</hibernate.validator.version>
-        <jansi.version>1.11</jansi.version>
+        <jansi.version>1.12-SNAPSHOT</jansi.version>
         <javassist.version>3.9.0.GA</javassist.version>
         <jline.version>3.0.0-SNAPSHOT</jline.version>
         <jsw.version>3.2.3</jsw.version>
@@ -386,6 +386,16 @@
             <id>ops4j.snapshots</id>
             <name>OPS4j Snapshots</name>
             <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>fusesource.snapshots</id>
+            <url>https://repository.jboss.org/nexus/content/repositories/fs-snapshots</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
