@@ -1286,7 +1286,7 @@ public class Deployer {
                     deployment.toInstall.add(resource);
                 }
             }
-            Collections.sort(deployment.toInstall, new ResourceComparator());
+            Collections.sort(deployment.toInstall, new ResourceComparator(resolver.getWiring()));
 
             // Add this region if there is something to do
             if (!deployment.toDelete.isEmpty()
