@@ -25,7 +25,6 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +35,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.felix.utils.version.VersionRange;
 import org.apache.felix.utils.version.VersionTable;
@@ -237,7 +237,7 @@ public class Deployer {
         resolver.prepare(
                 dstate.features.values(),
                 request.requirements,
-                apply(unmanagedBundles, adapt(BundleRevision.class))
+                apply(unmanagedBundles, b -> b.adapt(BundleRevision.class))
         );
         Set<String> prereqs = resolver.collectPrerequisites();
         if (!prereqs.isEmpty()) {
@@ -291,7 +291,7 @@ public class Deployer {
 
         Map<String, StreamProvider> providers = resolver.getProviders();
         Map<String, Set<Resource>> featuresPerRegion = resolver.getFeaturesPerRegions();
-        Map<String, Set<String>> installedFeatures = apply(featuresPerRegion, featureId());
+        Map<String, Set<String>> installedFeatures = apply(featuresPerRegion, ResourceUtils::getFeatureId);
         Map<String, Set<String>> newFeatures = diff(installedFeatures, dstate.state.installedFeatures);
         Map<String, Set<String>> delFeatures = diff(dstate.state.installedFeatures, installedFeatures);
 
@@ -364,29 +364,24 @@ public class Deployer {
         Set<Bundle> toManage = new TreeSet<>(new BundleComparator()); // sort is only used for display
         if (!noManageBundles) {
             Set<Resource> features = resolver.getFeatures().keySet();
-            Set<? extends Resource> unmanaged = apply(flatten(unmanagedBundles), adapt(BundleRevision.class));
+            Set<Resource> unmanaged = apply(flatten(unmanagedBundles), b -> b.adapt(BundleRevision.class));
             Set<Resource> requested = new HashSet<>();
             // Gather bundles required by a feature
-            if (resolver != null && resolver.getWiring() != null) {
-                for (List<Wire> wires : resolver.getWiring().values()) {
-                    for (Wire wire : wires) {
-                        if (features.contains(wire.getRequirer()) && unmanaged.contains(wire.getProvider())) {
-                            requested.add(wire.getProvider());
-                        }
-                    }
-                }
+            if (resolver.getWiring() != null) {
+                resolver.getWiring().values().stream()
+                        .flatMap(List::stream)
+                        .filter(wire -> features.contains(wire.getRequirer()) && unmanaged.contains(wire.getProvider()))
+                        .map(Wire::getProvider)
+                        .forEach(requested::add);
             }
             // Now, we know which bundles are completely unmanaged
             unmanaged.removeAll(requested);
             // Check if bundles have wires from really unmanaged bundles
-            if (resolver != null && resolver.getWiring() != null) {
-                for (List<Wire> wires : resolver.getWiring().values()) {
-                    for (Wire wire : wires) {
-                        if (requested.contains(wire.getProvider()) && unmanaged.contains(wire.getRequirer())) {
-                            requested.remove(wire.getProvider());
-                        }
-                    }
-                }
+            if (resolver.getWiring() != null) {
+                resolver.getWiring().values().stream()
+                        .flatMap(List::stream)
+                        .filter(wire -> requested.contains(wire.getProvider()) && unmanaged.contains(wire.getRequirer()))
+                        .forEach(wire -> requested.remove(wire.getProvider()));
             }
             if (!requested.isEmpty()) {
                 Map<Long, String> bundleToRegion = new HashMap<>();
@@ -598,8 +593,8 @@ public class Deployer {
             toRefresh.put(dstate.serviceBundle, "FeaturesService bundle is being updated");
             computeBundlesToRefresh(toRefresh,
                     dstate.bundles.values(),
-                    Collections.<Resource, Bundle>emptyMap(),
-                    Collections.<Resource, List<Wire>>emptyMap());
+                    Collections.emptyMap(),
+                    Collections.emptyMap());
             callback.stopBundle(dstate.serviceBundle, STOP_TRANSIENT);
             try (
                     InputStream is = getBundleInputStream(resource, providers)
@@ -665,7 +660,7 @@ public class Deployer {
         {
             // Add bundles
             Map<String, Set<Long>> bundles = new HashMap<>();
-            add(bundles, apply(unmanagedBundles, bundleId()));
+            add(bundles, apply(unmanagedBundles, Bundle::getBundleId));
             add(bundles, managedBundles);
             // Compute policies
             RegionDigraph computedDigraph = resolver.getFlatDigraph();
@@ -746,7 +741,7 @@ public class Deployer {
         }
         if (hasToInstall) {
             print("Installing bundles:", verbose);
-            Map<Bundle, Integer> customStartLevels = new HashMap<Bundle, Integer>();
+            Map<Bundle, Integer> customStartLevels = new HashMap<>();
             for (Map.Entry<String, Deployer.RegionDeployment> entry : deployment.regions.entrySet()) {
                 String name = entry.getKey();
                 Deployer.RegionDeployment regionDeployment = entry.getValue();
@@ -824,10 +819,10 @@ public class Deployer {
         }
 
         if (!noRefresh) {
-            if (toRefresh.containsKey(dstate.bundles.get(0l))) {
+            if (toRefresh.containsKey(dstate.bundles.get(0L))) {
                 print("The system bundle needs to be refreshed, restarting Karaf...", verbose);
                 System.setProperty("karaf.restart", "true");
-                dstate.bundles.get(0l).stop();
+                dstate.bundles.get(0L).stop();
                 return;
             }
 
@@ -929,11 +924,9 @@ public class Deployer {
             FeatureState reqState = mergeStates(state, states.get(resource));
             if (reqState != states.get(resource)) {
                 states.put(resource, reqState);
-                for (Wire wire : resolver.getWiring().get(resource)) {
-                    if (IDENTITY_NAMESPACE.equals(wire.getCapability().getNamespace())) {
-                        propagateState(states, wire.getProvider(), reqState, resolver);
-                    }
-                }
+                resolver.getWiring().get(resource).stream()
+                        .filter(wire -> IDENTITY_NAMESPACE.equals(wire.getCapability().getNamespace()))
+                        .forEach(wire -> propagateState(states, wire.getProvider(), reqState, resolver));
             }
         }
     }
@@ -963,7 +956,7 @@ public class Deployer {
         // Compute the new list of fragments
         Map<Bundle, Set<Resource>> newFragments = new HashMap<>();
         for (Bundle bundle : bundles) {
-            newFragments.put(bundle, new HashSet<Resource>());
+            newFragments.put(bundle, new HashSet<>());
         }
         if (resolution != null) {
             for (Resource res : resolution.keySet()) {
@@ -1013,12 +1006,10 @@ public class Deployer {
                     continue;
                 }
                 // Check if this bundle is a host and its fragments changed
-                Set<Resource> oldFragments = new HashSet<>();
-                for (BundleWire wire : wiring.getProvidedWires(null)) {
-                    if (HOST_NAMESPACE.equals(wire.getCapability().getNamespace())) {
-                        oldFragments.add(wire.getRequirer());
-                    }
-                }
+                Set<Resource> oldFragments = wiring.getProvidedWires(null).stream()
+                        .filter(wire -> HOST_NAMESPACE.equals(wire.getCapability().getNamespace()))
+                        .map(BundleWire::getRequirer)
+                        .collect(Collectors.toSet());
                 if (!oldFragments.containsAll(newFragments.get(bundle))) {
                     toRefresh.put(bundle, "Attached fragments changed: " + new ArrayList<>(newFragments.get(bundle)));
                     break;
@@ -1107,7 +1098,7 @@ public class Deployer {
         }
     }
 
-    protected void logWiring(Map<Resource, List<Wire>> wiring, boolean onlyFeatures) {
+    private void logWiring(Map<Resource, List<Wire>> wiring, boolean onlyFeatures) {
         print("Wiring:", true);
         Map<Resource, Set<Resource>> wires = new HashMap<>();
         for (Resource r : wiring.keySet()) {
@@ -1131,7 +1122,7 @@ public class Deployer {
         }
     }
 
-    protected void logDeployment(Deployer.Deployment overallDeployment, boolean verbose) {
+    private void logDeployment(Deployer.Deployment overallDeployment, boolean verbose) {
         if (overallDeployment.regions.isEmpty()) {
             print("No deployment change.", verbose);
             return;
@@ -1161,7 +1152,7 @@ public class Deployer {
         }
     }
 
-    protected Deployment computeDeployment(
+    private Deployment computeDeployment(
                     DeploymentState dstate,
                     DeploymentRequest request,
                     SubsystemResolver resolver) throws IOException {
@@ -1188,10 +1179,10 @@ public class Deployer {
             // Compute the list of resources to deploy in the region
             Set<Resource> bundlesInRegion = bundlesPerRegions.get(region);
             List<Resource> toDeploy = bundlesInRegion != null
-                    ? new ArrayList<>(bundlesInRegion) : new ArrayList<Resource>();
+                    ? new ArrayList<>(bundlesInRegion) : new ArrayList<>();
 
             // Remove the system bundle
-            Bundle systemBundle = dstate.bundles.get(0l);
+            Bundle systemBundle = dstate.bundles.get(0L);
             if (systemBundle != null) {
                 // It may be null when unit testing, so ignore that
                 toDeploy.remove(systemBundle.adapt(BundleRevision.class));
@@ -1232,7 +1223,7 @@ public class Deployer {
                                     // This is a bit hacky, but we can't get a hold on the real bundle location
                                     // in a standard way in OSGi.  Therefore, hack into Felix/Equinox to obtain the
                                     // corresponding jar url and use that one to compute the checksum of the bundle.
-                                    oldCrc = 0l;
+                                    oldCrc = 0L;
                                     try {
                                         URL url = bundle.getEntry("META-INF/MANIFEST.MF");
                                         URLConnection con = url.openConnection();
@@ -1308,39 +1299,12 @@ public class Deployer {
         return result;
     }
 
-    protected <T> MapUtils.Function<Bundle, T> adapt(final Class<T> clazz) {
-        return new MapUtils.Function<Bundle, T>() {
-            @Override
-            public T apply(Bundle bundle) {
-                return bundle.adapt(clazz);
-            }
-        };
-    }
-
-    protected MapUtils.Function<Bundle, Long> bundleId() {
-        return new MapUtils.Function<Bundle, Long>() {
-            @Override
-            public Long apply(Bundle bundle) {
-                return bundle.getBundleId();
-            }
-        };
-    }
-
-    protected MapUtils.Function<Resource, String> featureId() {
-        return new MapUtils.Function<Resource, String>() {
-            @Override
-            public String apply(Resource resource) {
-                return getFeatureId(resource);
-            }
-        };
-    }
-
-    protected boolean isUpdateable(Resource resource) {
+    private boolean isUpdateable(Resource resource) {
         String uri = getUri(resource);
-        return uri.matches(UPDATEABLE_URIS);
+        return uri != null && uri.matches(UPDATEABLE_URIS);
     }
 
-    protected List<Bundle> getBundlesToStart(Collection<Bundle> bundles, Bundle serviceBundle) {
+    private List<Bundle> getBundlesToStart(Collection<Bundle> bundles, Bundle serviceBundle) {
         // Restart the features service last, regardless of any other consideration
         // so that we don't end up with the service trying to do stuff before we're done
         boolean restart = false;
@@ -1379,7 +1343,7 @@ public class Deployer {
         return sorted;
     }
 
-    protected List<Bundle> getBundlesToStop(Collection<Bundle> bundles) {
+    private List<Bundle> getBundlesToStop(Collection<Bundle> bundles) {
         SortedMap<Integer, Set<Bundle>> bundlesPerStartLevel = new TreeMap<>();
         for (Bundle bundle : bundles) {
             int sl = bundle.adapt(BundleStartLevel.class).getStartLevel();
@@ -1402,11 +1366,7 @@ public class Deployer {
             }
         }
         if (!bundlesToDestroy.isEmpty()) {
-            Collections.sort(bundlesToDestroy, new Comparator<Bundle>() {
-                public int compare(Bundle b1, Bundle b2) {
-                    return (int) (b2.getLastModified() - b1.getLastModified());
-                }
-            });
+            Collections.sort(bundlesToDestroy, (b1, b2) -> (int) (b2.getLastModified() - b1.getLastModified()));
             LOGGER.debug("Selected bundles {} for destroy (no services in use)", bundlesToDestroy);
         } else {
             ServiceReference ref = null;
@@ -1443,7 +1403,7 @@ public class Deployer {
         return nb;
     }
 
-    protected InputStream getBundleInputStream(Resource resource, Map<String, StreamProvider> providers) throws IOException {
+    private InputStream getBundleInputStream(Resource resource, Map<String, StreamProvider> providers) throws IOException {
         String uri = getUri(resource);
         if (uri == null) {
             throw new IllegalStateException("Resource has no uri");
@@ -1456,7 +1416,7 @@ public class Deployer {
         return provider.open();
     }
 
-    public static void ensureAllClassesLoaded(Bundle bundle) throws ClassNotFoundException {
+    private static void ensureAllClassesLoaded(Bundle bundle) throws ClassNotFoundException {
         BundleWiring wiring = bundle.adapt(BundleWiring.class);
         if (wiring != null) {
             for (String path : wiring.listResources("/", "*.class", BundleWiring.LISTRESOURCES_RECURSE)) {
