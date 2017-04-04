@@ -250,6 +250,7 @@
         <jansi.version>1.16</jansi.version>
         <javassist.version>3.9.0.GA</javassist.version>
         <jline.version>3.3.0</jline.version>
+        <aesh.readline.version>1.0-CR16-SNAPSHOT</aesh.readline.version>
         <jsw.version>3.2.3</jsw.version>
         <log4j.version>1.2.17</log4j.version>
         <maven.version>2.0.9</maven.version>
@@ -1182,6 +1183,16 @@
                 <groupId>org.jline</groupId>
                 <artifactId>jline</artifactId>
                 <version>${jline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aesh</groupId>
+                <artifactId>aesh-readline</artifactId>
+                <version>${aesh.readline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.aesh</groupId>
+                <artifactId>aesh-terminal-api</artifactId>
+                <version>${aesh.readline.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.maven.artifact</groupId>

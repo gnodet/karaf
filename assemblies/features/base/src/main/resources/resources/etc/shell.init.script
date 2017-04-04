@@ -49,8 +49,8 @@ if { %(max_colors >= 256) } {
   \#rprompt = { $__rprompt_formatter format ($__date_class newInstance) }
 }
 
-setopt group
-keymap "^[OA" up-line-or-search
-keymap "^[OB" down-line-or-search
+// setopt group
+// keymap "^[OA" up-line-or-search
+// keymap "^[OB" down-line-or-search
 
 
